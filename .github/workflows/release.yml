@@ -4,11 +4,13 @@ on:
   workflow_dispatch:
     inputs:
       kmp_version:
-        description: "Version of the KMP Shared.xcframework release (e.g. 0.0.1)"
+        description: "Version of the KMP Shared.xcframework release (no leading v; e.g. 0.0.1)"
         required: true
+        default: "0.0.1"
       package_version:
         description: "Swift package version to tag (e.g. 0.1.0)"
         required: true
+        default: "0.1.0"
 
 jobs:
   release:
@@ -32,7 +34,7 @@ jobs:
           KMP_VERSION: ${{ inputs.kmp_version }}
         run: |
           curl -L --fail -o Shared.xcframework.zip \
-            "https://github.com/ahmedre/mobile-sync/releases/download/${KMP_VERSION}/Shared.xcframework.zip"
+            "https://github.com/quran/mobile-sync/releases/download/v${KMP_VERSION}/Shared-${KMP_VERSION}.xcframework.zip"
 
       - name: Compute checksum
         id: checksum

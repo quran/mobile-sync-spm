@@ -21,7 +21,7 @@ let binaryTarget: Target = {
     return .binaryTarget(
       name: binaryTargetName,
       url:
-        "https://github.com/ahmedre/mobile-sync/releases/download/\(remoteVersion)/\(binaryTargetName).xcframework.zip",
+        "https://github.com/quran/mobile-sync/releases/download/v\(remoteVersion)/\(binaryTargetName)-\(remoteVersion).xcframework.zip",
       checksum: remoteChecksum
     )
   }
