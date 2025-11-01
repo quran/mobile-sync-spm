@@ -2,12 +2,12 @@
 import Foundation
 import PackageDescription
 
-let packageName = "MobileSyncSPM"
+let packageName = "MobileSync"
 let binaryTargetName = "Shared"
 let shimTargetName = "MobileSync"
 let shimProductName = "MobileSync"
 
-let useLocalBinary = false
+let useLocalBinary = true
 let remoteVersion = ""
 let remoteChecksum = ""
 
@@ -33,10 +33,6 @@ let package = Package(
     .iOS(.v15)
   ],
   products: [
-    .library(
-      name: binaryTargetName,
-      targets: [binaryTargetName]
-    ),
     .library(
       name: shimProductName,
       targets: [shimTargetName]
