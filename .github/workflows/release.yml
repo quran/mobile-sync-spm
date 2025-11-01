@@ -1,0 +1,90 @@
+name: Release Wrapper
+
+on:
+  workflow_dispatch:
+    inputs:
+      kmp_version:
+        description: "Version of the KMP Shared.xcframework release (e.g. 0.0.1)"
+        required: true
+      package_version:
+        description: "Swift package version to tag (e.g. 0.1.0)"
+        required: true
+
+jobs:
+  release:
+    runs-on: macos-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configure Git author
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Download Shared.xcframework.zip
+        env:
+          KMP_VERSION: ${{ inputs.kmp_version }}
+        run: |
+          curl -L --fail -o Shared.xcframework.zip \
+            "https://github.com/ahmedre/mobile-sync/releases/download/${KMP_VERSION}/Shared.xcframework.zip"
+
+      - name: Compute checksum
+        id: checksum
+        run: |
+          CHECKSUM=$(swift package compute-checksum Shared.xcframework.zip)
+          echo "checksum=$CHECKSUM" >> "$GITHUB_OUTPUT"
+
+      - name: Update Package.swift
+        env:
+          REMOTE_VERSION: ${{ inputs.kmp_version }}
+          REMOTE_CHECKSUM: ${{ steps.checksum.outputs.checksum }}
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import os
+          import re
+
+          package = Path("Package.swift")
+          data = package.read_text()
+
+          version = os.environ["REMOTE_VERSION"]
+          checksum = os.environ["REMOTE_CHECKSUM"]
+
+          data, count_v = re.subn(r'let remoteVersion = ".*"', f'let remoteVersion = "{version}"', data, count=1)
+          if count_v != 1:
+              raise SystemExit("Failed to update remoteVersion in Package.swift")
+
+          data, count_c = re.subn(r'let remoteChecksum = ".*"', f'let remoteChecksum = "{checksum}"', data, count=1)
+          if count_c != 1:
+              raise SystemExit("Failed to update remoteChecksum in Package.swift")
+
+          package.write_text(data)
+          PY
+
+      - name: Build package
+        run: swift build
+
+      - name: Commit manifest update
+        env:
+          PACKAGE_VERSION: ${{ inputs.package_version }}
+        run: |
+          if git diff --quiet; then
+            echo "No changes to commit; aborting."
+            exit 1
+          fi
+          git add Package.swift
+          git commit -m "Release ${PACKAGE_VERSION}"
+
+      - name: Push release commit and tag
+        env:
+          PACKAGE_VERSION: ${{ inputs.package_version }}
+        run: |
+          git push origin HEAD:main
+          git tag "v${PACKAGE_VERSION}"
+          git push origin "v${PACKAGE_VERSION}"
