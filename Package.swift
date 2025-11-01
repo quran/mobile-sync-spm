@@ -7,7 +7,7 @@ let binaryTargetName = "Shared"
 let shimTargetName = "MobileSync"
 let shimProductName = "MobileSync"
 
-let useLocalBinary = true
+let useLocalBinary = false
 let remoteVersion = ""
 let remoteChecksum = ""
 
