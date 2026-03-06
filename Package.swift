@@ -30,8 +30,7 @@ let binaryTarget: Target = {
 let package = Package(
   name: packageName,
   platforms: [
-    .iOS(.v15),
-    .macOS(.v10_15)
+    .iOS(.v15)
   ],
   products: [
     .library(
