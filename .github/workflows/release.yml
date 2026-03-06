@@ -70,7 +70,8 @@ jobs:
           PY
 
       - name: Build package
-        run: swift build
+        run: xcodebuild -scheme MobileSync -destination 'generic/platform=iOS Simulator'
+
 
       - name: Commit manifest update
         env:

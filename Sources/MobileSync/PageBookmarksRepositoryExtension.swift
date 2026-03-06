@@ -9,8 +9,8 @@ import Foundation
 import KMPNativeCoroutinesAsync
 import Shared
 
-public extension PageBookmarksRepository {
-  func bookmarksSequence() -> NativeFlowAsyncSequence<[PageBookmark], Error, KotlinUnit> {
-    asyncSequence(for: getAllBookmarks())
+public extension BookmarksRepository {
+  func bookmarksSequence() -> NativeFlowAsyncSequence<[Bookmark], Error, KotlinUnit> {
+    asyncSequence(for: getBookmarksFlow())
   }
 }
