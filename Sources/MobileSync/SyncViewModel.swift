@@ -36,7 +36,7 @@ public final class SyncViewModel {
   }
 
   public func bookmarksForCollection(collectionId: String)
-    -> NativeFlowAsyncSequence<[Bookmark], Error, KotlinUnit>
+    -> NativeFlowAsyncSequence<[CollectionBookmark], Error, KotlinUnit>
   {
     asyncSequence(for: syncService.getBookmarksForCollectionFlow(collectionLocalId: collectionId))
   }

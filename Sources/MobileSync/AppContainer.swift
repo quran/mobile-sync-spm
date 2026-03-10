@@ -35,7 +35,7 @@ public struct MobileSyncClientConfiguration {
  * This mirrors the demo setup while allowing iOS consumers to inject a runtime auth config when
  * they can't rely on the binary's baked BuildKonfig values.
  */
-public final class AppContainer {
+public final class AppContainer: @unchecked Sendable {
   public static let shared = AppContainer()
 
   public static var graph: any AppGraph {
