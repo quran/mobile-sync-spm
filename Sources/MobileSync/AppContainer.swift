@@ -62,9 +62,13 @@ public final class AppContainer: @unchecked Sendable {
     AuthFlowFactoryProvider.shared.doInitialize()
 
     let driverFactory = DriverFactory()
+    let authEnvironment = configuration.map {
+      Self.makeAuthEnvironment(usePreProduction: $0.usePreProduction)
+    } ?? Self.makeAuthEnvironment(from: environment)
     let graph = SharedDependencyGraph.shared.doInit(
       driverFactory: driverFactory,
-      environment: environment
+      environment: environment,
+      authEnvironment: authEnvironment
     )
 
     self.graph = graph
@@ -72,7 +76,7 @@ public final class AppContainer: @unchecked Sendable {
 
     if let configuration {
       let authConfig = AuthConfig(
-        usePreProduction: configuration.usePreProduction,
+        environment: authEnvironment,
         clientId: configuration.clientId,
         clientSecret: configuration.clientSecret,
         redirectUri: configuration.redirectUri,
@@ -112,5 +116,13 @@ public final class AppContainer: @unchecked Sendable {
       authService = graph.authService
       syncService = graph.syncService
     }
+  }
+
+  private static func makeAuthEnvironment(usePreProduction: Bool) -> AuthEnvironment {
+    usePreProduction ? .prelive : .production
+  }
+
+  private static func makeAuthEnvironment(from environment: SynchronizationEnvironment) -> AuthEnvironment {
+    environment.endPointURL.lowercased().contains("prelive") ? .prelive : .production
   }
 }
