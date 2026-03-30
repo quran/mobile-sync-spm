@@ -74,8 +74,4 @@ public extension SyncService {
   func removeNote(localId: String) async throws {
     _ = try await asyncFunction(for: deleteNote(localId: localId))
   }
-
-  func triggerSyncNow() {
-    triggerSync()
-  }
 }
