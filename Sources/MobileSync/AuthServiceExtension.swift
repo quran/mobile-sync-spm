@@ -17,15 +17,7 @@ public extension AuthService {
   }
 
   func authenticationHeaders() async throws -> [String: String] {
-    try await withCheckedThrowingContinuation { continuation in
-      getAuthHeaders { headers, error in
-        if let error {
-          continuation.resume(throwing: error)
-        } else {
-          continuation.resume(returning: headers ?? [:])
-        }
-      }
-    }
+    try await asyncFunction(for: getAuthHeaders())
   }
 
   func authStateSequence() -> NativeFlowAsyncSequence<AuthState, Error, KotlinUnit> {
