@@ -92,12 +92,6 @@ public extension SyncService {
     }
   }
 
-  /// Convenience helper until native update API is exposed by SyncService.
-  func replaceNote(localId: String, body: String, startAyahId: Int64, endAyahId: Int64) async throws {
-    try await removeNote(localId: localId)
-    try await createNote(body: body, startAyahId: startAyahId, endAyahId: endAyahId)
-  }
-
   func removeNote(localId: String) async throws {
     _ = try await asyncFunction(for: deleteNote(localId: localId))
   }
