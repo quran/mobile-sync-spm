@@ -71,7 +71,32 @@ public extension SyncService {
     )
   }
 
+  func updateNote(localId: String, body: String, startAyahId: Int64, endAyahId: Int64) async throws {
+    guard let notesRepository = pipelineForIos.notesRepository as? NotesRepository else {
+      throw SyncServiceExtensionError.notesRepositoryUnavailable
+    }
+
+    try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+      notesRepository.updateNote(
+        localId: localId,
+        body: body,
+        startAyahId: startAyahId,
+        endAyahId: endAyahId
+      ) { _, error in
+        if let error {
+          continuation.resume(throwing: error)
+        } else {
+          continuation.resume(returning: ())
+        }
+      }
+    }
+  }
+
   func removeNote(localId: String) async throws {
     _ = try await asyncFunction(for: deleteNote(localId: localId))
   }
+}
+
+private enum SyncServiceExtensionError: Error {
+  case notesRepositoryUnavailable
 }
