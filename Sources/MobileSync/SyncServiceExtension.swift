@@ -3,7 +3,7 @@ import KMPNativeCoroutinesAsync
 import Shared
 
 public extension SyncService {
-  func bookmarksSequence() -> NativeFlowAsyncSequence<[Bookmark], Error, KotlinUnit> {
+  func bookmarksSequence() -> NativeFlowAsyncSequence<[AyahBookmark], Error, KotlinUnit> {
     asyncSequence(for: bookmarks)
   }
 
@@ -16,22 +16,22 @@ public extension SyncService {
   }
 
   func collectionsWithBookmarksSequence()
-    -> NativeFlowAsyncSequence<[CollectionWithBookmarks], Error, KotlinUnit>
+    -> NativeFlowAsyncSequence<[CollectionWithAyahBookmarks], Error, KotlinUnit>
   {
     asyncSequence(for: collectionsWithBookmarks)
   }
 
-  func notesSequence() -> NativeFlowAsyncSequence<[Note_], Error, KotlinUnit> {
+  func notesSequence() -> NativeFlowAsyncSequence<[Note], Error, KotlinUnit> {
     asyncSequence(for: notes)
   }
 
   func bookmarksForCollectionSequence(collectionLocalId: String)
-    -> NativeFlowAsyncSequence<[CollectionBookmark], Error, KotlinUnit>
+    -> NativeFlowAsyncSequence<[CollectionAyahBookmark], Error, KotlinUnit>
   {
     asyncSequence(for: getBookmarksForCollectionFlow(collectionLocalId: collectionLocalId))
   }
 
-  func addAyahBookmark(sura: Int32, ayah: Int32) async throws -> Bookmark {
+  func addAyahBookmark(sura: Int32, ayah: Int32) async throws -> AyahBookmark {
     try await asyncFunction(for: addBookmark(sura: sura, ayah: ayah))
   }
 
@@ -40,7 +40,7 @@ public extension SyncService {
   }
 
   func addReadingSession(sura: Int32, ayah: Int32) async throws -> ReadingSession {
-    try await asyncFunction(for: addReadingSession(chapterNumber: sura, verseNumber: ayah))
+    try await asyncFunction(for: addReadingSession(sura: sura, ayah: ayah))
   }
 
   func removeReadingBookmark() async throws -> Bool {
@@ -48,7 +48,7 @@ public extension SyncService {
     return deleted.boolValue
   }
 
-  func removeBookmark(_ bookmark: Bookmark) async throws {
+  func removeBookmark(_ bookmark: AyahBookmark) async throws {
     _ = try await asyncFunction(for: deleteBookmark(bookmark: bookmark))
   }
 
@@ -60,7 +60,7 @@ public extension SyncService {
     _ = try await asyncFunction(for: deleteCollection(localId: localId))
   }
 
-  func addBookmarkToCollection(collectionLocalId: String, bookmark: Bookmark) async throws {
+  func addBookmarkToCollection(collectionLocalId: String, bookmark: AyahBookmark) async throws {
     _ = try await asyncFunction(
       for: addBookmarkToCollection(
         collectionLocalId: collectionLocalId,
@@ -70,7 +70,7 @@ public extension SyncService {
   }
 
   func addAyahBookmarkToCollection(collectionLocalId: String, sura: Int32, ayah: Int32) async throws
-    -> CollectionBookmark
+    -> CollectionAyahBookmark
   {
     try await asyncFunction(
       for: addAyahBookmarkToCollection(
@@ -81,7 +81,7 @@ public extension SyncService {
     )
   }
 
-  func removeBookmarkFromCollection(collectionLocalId: String, bookmark: Bookmark) async throws {
+  func removeBookmarkFromCollection(collectionLocalId: String, bookmark: AyahBookmark) async throws {
     _ = try await asyncFunction(
       for: removeBookmarkFromCollection(
         collectionLocalId: collectionLocalId,
@@ -90,17 +90,32 @@ public extension SyncService {
     )
   }
 
-  func createNote(body: String, startAyahId: Int64, endAyahId: Int64) async throws {
+  func createNote(
+    body: String,
+    startSura: Int32,
+    startAyah: Int32,
+    endSura: Int32,
+    endAyah: Int32
+  ) async throws {
     _ = try await asyncFunction(
       for: addNote(
         body: body,
-        startAyahId: startAyahId,
-        endAyahId: endAyahId
+        startSura: startSura,
+        startAyah: startAyah,
+        endSura: endSura,
+        endAyah: endAyah
       )
     )
   }
 
-  func updateNote(localId: String, body: String, startAyahId: Int64, endAyahId: Int64) async throws {
+  func updateNote(
+    localId: String,
+    body: String,
+    startSura: Int32,
+    startAyah: Int32,
+    endSura: Int32,
+    endAyah: Int32
+  ) async throws {
     guard let notesRepository = pipelineForIos.notesRepository as? NotesRepository else {
       throw SyncServiceExtensionError.notesRepositoryUnavailable
     }
@@ -109,8 +124,10 @@ public extension SyncService {
       notesRepository.updateNote(
         localId: localId,
         body: body,
-        startAyahId: startAyahId,
-        endAyahId: endAyahId
+        startSura: startSura,
+        startAyah: startAyah,
+        endSura: endSura,
+        endAyah: endAyah
       ) { _, error in
         if let error {
           continuation.resume(throwing: error)
@@ -124,6 +141,11 @@ public extension SyncService {
   func removeNote(localId: String) async throws {
     _ = try await asyncFunction(for: deleteNote(localId: localId))
   }
+
+  func logout(clearLocalData: Bool) async throws {
+    _ = try await asyncFunction(for: logout(clearLocalData: clearLocalData))
+  }
+
 }
 
 private enum SyncServiceExtensionError: Error {
