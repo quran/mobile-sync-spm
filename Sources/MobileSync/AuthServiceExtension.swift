@@ -7,6 +7,10 @@ public extension AuthService {
     _ = try await asyncFunction(for: login())
   }
 
+  func signInWithReauthentication() async throws {
+    _ = try await asyncFunction(for: loginWithReauthentication())
+  }
+
   func signOut() async throws {
     _ = try await asyncFunction(for: logout())
   }
