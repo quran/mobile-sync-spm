@@ -7,6 +7,14 @@ public extension SyncService {
     asyncSequence(for: bookmarks)
   }
 
+  func readingBookmarkSequence() -> NativeFlowAsyncSequence<ReadingBookmark?, Error, KotlinUnit> {
+    asyncSequence(for: readingBookmark)
+  }
+
+  func readingSessionsSequence() -> NativeFlowAsyncSequence<[ReadingSession], Error, KotlinUnit> {
+    asyncSequence(for: readingSessions)
+  }
+
   func collectionsWithBookmarksSequence()
     -> NativeFlowAsyncSequence<[CollectionWithBookmarks], Error, KotlinUnit>
   {
@@ -23,12 +31,21 @@ public extension SyncService {
     asyncSequence(for: getBookmarksForCollectionFlow(collectionLocalId: collectionLocalId))
   }
 
-  func addPageBookmark(_ page: Int32) async throws -> Bookmark {
-    try await asyncFunction(for: addBookmark(page: page))
-  }
-
   func addAyahBookmark(sura: Int32, ayah: Int32) async throws -> Bookmark {
     try await asyncFunction(for: addBookmark(sura: sura, ayah: ayah))
+  }
+
+  func addReadingBookmark(sura: Int32, ayah: Int32) async throws -> ReadingBookmark {
+    try await asyncFunction(for: addReadingBookmark(sura: sura, ayah: ayah))
+  }
+
+  func addReadingSession(sura: Int32, ayah: Int32) async throws -> ReadingSession {
+    try await asyncFunction(for: addReadingSession(chapterNumber: sura, verseNumber: ayah))
+  }
+
+  func removeReadingBookmark() async throws -> Bool {
+    let deleted: KotlinBoolean = try await asyncFunction(for: deleteReadingBookmark())
+    return deleted.boolValue
   }
 
   func removeBookmark(_ bookmark: Bookmark) async throws {
@@ -48,6 +65,18 @@ public extension SyncService {
       for: addBookmarkToCollection(
         collectionLocalId: collectionLocalId,
         bookmark: bookmark
+      )
+    )
+  }
+
+  func addAyahBookmarkToCollection(collectionLocalId: String, sura: Int32, ayah: Int32) async throws
+    -> CollectionBookmark
+  {
+    try await asyncFunction(
+      for: addAyahBookmarkToCollection(
+        collectionLocalId: collectionLocalId,
+        sura: sura,
+        ayah: ayah
       )
     )
   }
