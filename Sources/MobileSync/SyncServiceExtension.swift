@@ -21,7 +21,7 @@ public extension SyncService {
     asyncSequence(for: collectionsWithBookmarks)
   }
 
-  func notesSequence() -> NativeFlowAsyncSequence<[Note], Error, KotlinUnit> {
+  func notesSequence() -> NativeFlowAsyncSequence<[Note_], Error, KotlinUnit> {
     asyncSequence(for: notes)
   }
 
