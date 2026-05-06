@@ -35,8 +35,12 @@ public extension SyncService {
     try await asyncFunction(for: addBookmark(sura: sura, ayah: ayah))
   }
 
-  func addReadingBookmark(sura: Int32, ayah: Int32) async throws -> ReadingBookmark {
-    try await asyncFunction(for: addReadingBookmark(sura: sura, ayah: ayah))
+  func addAyahReadingBookmark(sura: Int32, ayah: Int32) async throws -> AyahReadingBookmark {
+    try await asyncFunction(for: addAyahReadingBookmark(sura: sura, ayah: ayah))
+  }
+
+  func addPageReadingBookmark(page: Int32) async throws -> PageReadingBookmark {
+    try await asyncFunction(for: addPageReadingBookmark(page: page))
   }
 
   func addReadingSession(sura: Int32, ayah: Int32) async throws -> ReadingSession {
