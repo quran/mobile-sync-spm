@@ -94,6 +94,14 @@ public extension SyncService {
     )
   }
 
+  func removeAyahBookmarkFromCollection(_ bookmark: CollectionAyahBookmark) async throws {
+    _ = try await asyncFunction(
+        for: removeAyahBookmarkFromCollection(
+            bookmark: bookmark
+        )
+    )
+  }
+
   func createNote(
     body: String,
     startSura: Int32,
