@@ -47,6 +47,10 @@ public extension SyncService {
     try await asyncFunction(for: addReadingSession(sura: sura, ayah: ayah))
   }
 
+  func addReadingSession(sura: Int32, ayah: Int32, timestamp: Date) async throws -> ReadingSession {
+    try await asyncFunction(for: addReadingSession(sura: sura, ayah: ayah, timestamp: timestamp))
+  }
+
   func removeReadingBookmark() async throws -> Bool {
     let deleted: KotlinBoolean = try await asyncFunction(for: deleteReadingBookmark())
     return deleted.boolValue
