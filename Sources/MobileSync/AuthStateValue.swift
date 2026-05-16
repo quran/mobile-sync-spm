@@ -3,7 +3,7 @@ import Shared
 public enum AuthStateValue {
   case idle
   case loading
-  case success(UserInfo)
+  case success(UserInfo?)
   case error(exception: KotlinException?, message: String)
 
   public init(_ state: AuthState) {
