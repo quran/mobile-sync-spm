@@ -8,8 +8,8 @@ let shimTargetName = "MobileSync"
 let shimProductName = "MobileSync"
 
 let useLocalBinary = false
-let remoteVersion = "0.1.6"
-let remoteChecksum = "de2b735d25a29d890a1210879c6b09579521a160063ad7a404697565b9b3ee68"
+let remoteVersion = "0.1.9"
+let remoteChecksum = "9bd3fc92ed72172f49932e91aaaa30d53d5586fc47446ae317d165a5c38b7848"
 
 let binaryTarget: Target = {
   if useLocalBinary {
