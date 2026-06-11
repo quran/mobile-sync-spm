@@ -143,26 +143,16 @@ public extension SyncService {
     endSura: Int32,
     endAyah: Int32
   ) async throws {
-    guard let notesRepository = pipelineForIos.notesRepository as? NotesRepository else {
-      throw SyncServiceExtensionError.notesRepositoryUnavailable
-    }
-
-    try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
-      notesRepository.updateNote(
+    _ = try await asyncFunction(
+      for: updateNote(
         localId: localId,
         body: body,
         startSura: startSura,
         startAyah: startAyah,
         endSura: endSura,
         endAyah: endAyah
-      ) { _, error in
-        if let error {
-          continuation.resume(throwing: error)
-        } else {
-          continuation.resume(returning: ())
-        }
-      }
-    }
+      )
+    )
   }
 
   func removeNote(localId: String) async throws {
@@ -173,8 +163,4 @@ public extension SyncService {
     _ = try await asyncFunction(for: logout(clearLocalData: clearLocalData))
   }
 
-}
-
-private enum SyncServiceExtensionError: Error {
-  case notesRepositoryUnavailable
 }

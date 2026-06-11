@@ -15,24 +15,15 @@ public enum AuthStateValue {
     case let success as AuthState.Success:
       self = .success(success.userInfo)
     case let error as AuthState.Error:
-      self = .error(exception: error.exception as? KotlinException, message: error.message)
+      self = .error(exception: error.exception, message: error.message)
     default:
       fatalError("Unhandled AuthState subtype: \(type(of: state))")
     }
   }
 }
 
-public extension AuthService {
+public extension SyncAuthService {
   var authStateValue: AuthStateValue {
     AuthStateValue(authState)
-  }
-
-  var loggedInUser: UserInfo? {
-    switch authStateValue {
-    case let .success(user):
-      user
-    case .idle, .loading, .error:
-      nil
-    }
   }
 }

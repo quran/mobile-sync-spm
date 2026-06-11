@@ -2,7 +2,7 @@ import Foundation
 import KMPNativeCoroutinesAsync
 import Shared
 
-public extension AuthService {
+public extension SyncAuthService {
   func signIn() async throws {
     _ = try await asyncFunction(for: login())
   }
@@ -12,16 +12,16 @@ public extension AuthService {
   }
 
   func signOut() async throws {
-    _ = try await asyncFunction(for: logout())
+    _ = try await asyncFunction(for: self.logout(clearLocalData: true))
   }
 
   func refreshAuthentication() async throws -> Bool {
-    let refreshed: KotlinBoolean = try await asyncFunction(for: refreshAccessTokenIfNeeded())
+    let refreshed: KotlinBoolean = try await asyncFunction(for: self.refreshAuthentication())
     return refreshed.boolValue
   }
 
   func authenticationHeaders() async throws -> [String: String] {
-    try await asyncFunction(for: getAuthHeaders())
+    try await asyncFunction(for: self.authenticationHeaders())
   }
 
   func authStateSequence() -> NativeFlowAsyncSequence<AuthState, Error, KotlinUnit> {
