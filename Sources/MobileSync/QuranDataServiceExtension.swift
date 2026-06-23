@@ -2,7 +2,7 @@ import Foundation
 import KMPNativeCoroutinesAsync
 import Shared
 
-public extension SyncService {
+public extension QuranDataService {
   func bookmarksSequence() -> NativeFlowAsyncSequence<[AyahBookmark], Error, KotlinUnit> {
     asyncSequence(for: bookmarks)
   }
@@ -51,7 +51,9 @@ public extension SyncService {
     try await asyncFunction(for: addReadingSession(sura: sura, ayah: ayah, timestamp: timestamp))
   }
 
-  func updateReadingSession(localId: String, sura: Int32, ayah: Int32, timestamp: Date) async throws -> ReadingSession {
+  func updateReadingSession(localId: String, sura: Int32, ayah: Int32, timestamp: Date) async throws
+    -> ReadingSession
+  {
     try await asyncFunction(
       for: updateReadingSession(
         localId: localId,
@@ -111,9 +113,9 @@ public extension SyncService {
 
   func removeAyahBookmarkFromCollection(_ bookmark: CollectionAyahBookmark) async throws {
     _ = try await asyncFunction(
-        for: removeAyahBookmarkFromCollection(
-            bookmark: bookmark
-        )
+      for: removeAyahBookmarkFromCollection(
+        bookmark: bookmark
+      )
     )
   }
 
@@ -162,5 +164,4 @@ public extension SyncService {
   func logout(clearLocalData: Bool) async throws {
     _ = try await asyncFunction(for: logout(clearLocalData: clearLocalData))
   }
-
 }
