@@ -8,7 +8,7 @@ final class MobileSyncAsyncSequenceTests: XCTestCase {
       continuation.yield(2)
       continuation.finish()
     }
-    var iterator = MobileSyncAsyncSequence(source).makeAsyncIterator()
+    let iterator = MobileSyncAsyncSequence(source).makeAsyncIterator()
 
     let first = try await iterator.next()
     let second = try await iterator.next()
