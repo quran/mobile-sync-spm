@@ -7,7 +7,7 @@ public struct MobileSyncAsyncSequence<Element>: AsyncSequence {
       }
     }
 
-    public mutating func next() async throws -> Element? {
+    public func next() async throws -> Element? {
       try await nextValue()
     }
 
