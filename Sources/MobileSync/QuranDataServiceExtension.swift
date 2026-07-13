@@ -1,34 +1,36 @@
 import Foundation
-import KMPNativeCoroutinesAsync
+internal import KMPNativeCoroutinesAsync
 import Shared
 
 public extension QuranDataService {
-  func bookmarksSequence() -> NativeFlowAsyncSequence<[AyahBookmark], Error, KotlinUnit> {
-    asyncSequence(for: bookmarks)
+  func bookmarksSequence() -> MobileSyncAsyncSequence<[AyahBookmark]> {
+    MobileSyncAsyncSequence(asyncSequence(for: bookmarks))
   }
 
-  func readingBookmarkSequence() -> NativeFlowAsyncSequence<ReadingBookmark?, Error, KotlinUnit> {
-    asyncSequence(for: readingBookmark)
+  func readingBookmarkSequence() -> MobileSyncAsyncSequence<ReadingBookmark?> {
+    MobileSyncAsyncSequence(asyncSequence(for: readingBookmark))
   }
 
-  func readingSessionsSequence() -> NativeFlowAsyncSequence<[ReadingSession], Error, KotlinUnit> {
-    asyncSequence(for: readingSessions)
+  func readingSessionsSequence() -> MobileSyncAsyncSequence<[ReadingSession]> {
+    MobileSyncAsyncSequence(asyncSequence(for: readingSessions))
   }
 
   func collectionsWithBookmarksSequence()
-    -> NativeFlowAsyncSequence<[CollectionWithAyahBookmarks], Error, KotlinUnit>
+    -> MobileSyncAsyncSequence<[CollectionWithAyahBookmarks]>
   {
-    asyncSequence(for: collectionsWithBookmarks)
+    MobileSyncAsyncSequence(asyncSequence(for: collectionsWithBookmarks))
   }
 
-  func notesSequence() -> NativeFlowAsyncSequence<[Note_], Error, KotlinUnit> {
-    asyncSequence(for: notes)
+  func notesSequence() -> MobileSyncAsyncSequence<[Note_]> {
+    MobileSyncAsyncSequence(asyncSequence(for: notes))
   }
 
   func bookmarksForCollectionSequence(collectionId: String)
-    -> NativeFlowAsyncSequence<[CollectionAyahBookmark], Error, KotlinUnit>
+    -> MobileSyncAsyncSequence<[CollectionAyahBookmark]>
   {
-    asyncSequence(for: getBookmarksForCollectionFlow(collectionId: collectionId))
+    MobileSyncAsyncSequence(
+      asyncSequence(for: getBookmarksForCollectionFlow(collectionId: collectionId))
+    )
   }
 
   func addAyahBookmark(sura: Int32, ayah: Int32) async throws -> AyahBookmark {
