@@ -1,5 +1,5 @@
 import Foundation
-import KMPNativeCoroutinesAsync
+internal import KMPNativeCoroutinesAsync
 import Shared
 
 public extension SyncAuthService {
@@ -24,7 +24,7 @@ public extension SyncAuthService {
     try await asyncFunction(for: self.authenticationHeaders())
   }
 
-  func authStateSequence() -> NativeFlowAsyncSequence<AuthState, Error, KotlinUnit> {
-    asyncSequence(for: authStateFlow)
+  func authStateSequence() -> MobileSyncAsyncSequence<AuthState> {
+    MobileSyncAsyncSequence(asyncSequence(for: authStateFlow))
   }
 }

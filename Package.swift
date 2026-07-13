@@ -57,5 +57,11 @@ let package = Package(
         .linkedLibrary("sqlite3")
       ]
     ),
+    .testTarget(
+      name: "MobileSyncTests",
+      dependencies: [
+        .target(name: shimTargetName)
+      ]
+    ),
   ]
 )
