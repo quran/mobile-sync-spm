@@ -7,15 +7,16 @@ let binaryTargetName = "Shared"
 let shimTargetName = "MobileSync"
 let shimProductName = "MobileSync"
 
-let useLocalBinary = false
+let localBinaryPath = ProcessInfo.processInfo.environment["MOBILE_SYNC_XCFRAMEWORK_PATH"]?
+  .trimmingCharacters(in: .whitespacesAndNewlines)
 let remoteVersion = "0.1.14"
 let remoteChecksum = "763b1ea2c553455dcf86653368f6f2d9dfd5419484bc2b195c54501bfad7b10e"
 
 let binaryTarget: Target = {
-  if useLocalBinary {
+  if let localBinaryPath, !localBinaryPath.isEmpty {
     return .binaryTarget(
       name: binaryTargetName,
-      path: "../mobile-sync/umbrella/build/XCFrameworks/release/\(binaryTargetName).xcframework"
+      path: localBinaryPath
     )
   } else {
     return .binaryTarget(
