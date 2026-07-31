@@ -7,6 +7,10 @@ public extension QuranDataService {
     MobileSyncAsyncSequence(asyncSequence(for: bookmarks))
   }
 
+  func highlightsSequence() -> MobileSyncAsyncSequence<[AyahHighlight]> {
+    MobileSyncAsyncSequence(asyncSequence(for: highlights))
+  }
+
   func readingBookmarkSequence() -> MobileSyncAsyncSequence<ReadingBookmark?> {
     MobileSyncAsyncSequence(asyncSequence(for: readingBookmark))
   }
@@ -145,6 +149,19 @@ public extension QuranDataService {
       for: deleteBookmark(sura: sura, ayah: ayah)
     )
     return deleted.boolValue
+  }
+
+  func setAyahHighlight(sura: Int32, ayah: Int32, color: AyahHighlightColor) async throws
+    -> AyahHighlight
+  {
+    try await asyncFunction(for: setHighlight(sura: sura, ayah: ayah, color: color))
+  }
+
+  func removeAyahHighlight(sura: Int32, ayah: Int32) async throws -> Bool {
+    let removed: KotlinBoolean = try await asyncFunction(
+      for: removeHighlight(sura: sura, ayah: ayah)
+    )
+    return removed.boolValue
   }
 
   func createCollection(named name: String) async throws -> BookmarkCollection {
