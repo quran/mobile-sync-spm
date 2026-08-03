@@ -2,29 +2,51 @@ import Foundation
 internal import KMPNativeCoroutinesAsync
 import Shared
 
-public extension SyncAuthService {
-  func signIn() async throws {
-    _ = try await asyncFunction(for: login())
+extension SyncAuthService {
+  public func signIn() async throws(MobileSyncAuthenticationError) {
+    do {
+      _ = try await asyncFunction(for: login())
+    } catch {
+      throw MobileSyncAuthenticationError(bridgedError: error)
+    }
   }
 
-  func signInWithReauthentication() async throws {
-    _ = try await asyncFunction(for: loginWithReauthentication())
+  public func signInWithReauthentication() async throws(MobileSyncAuthenticationError) {
+    do {
+      _ = try await asyncFunction(for: loginWithReauthentication())
+    } catch {
+      throw MobileSyncAuthenticationError(bridgedError: error)
+    }
   }
 
-  func signOut() async throws {
-    _ = try await asyncFunction(for: self.logout(clearLocalData: true))
+  public func signOut() async throws(MobileSyncAuthenticationError) {
+    do {
+      _ = try await asyncFunction(for: self.logout(clearLocalData: true))
+    } catch {
+      throw MobileSyncAuthenticationError(bridgedError: error)
+    }
   }
 
-  func refreshAuthentication() async throws -> Bool {
-    let refreshed: KotlinBoolean = try await asyncFunction(for: self.refreshAuthentication())
-    return refreshed.boolValue
+  public func refreshAuthentication() async throws(MobileSyncAuthenticationError) -> Bool {
+    do {
+      let refreshed: KotlinBoolean = try await asyncFunction(for: self.refreshAuthentication())
+      return refreshed.boolValue
+    } catch {
+      throw MobileSyncAuthenticationError(bridgedError: error)
+    }
   }
 
-  func authenticationHeaders() async throws -> [String: String] {
-    try await asyncFunction(for: self.authenticationHeaders())
+  public func authenticationHeaders() async throws(MobileSyncAuthenticationError) -> [String:
+    String]
+  {
+    do {
+      return try await asyncFunction(for: self.authenticationHeaders())
+    } catch {
+      throw MobileSyncAuthenticationError(bridgedError: error)
+    }
   }
 
-  func authStateSequence() -> MobileSyncAsyncSequence<AuthState> {
+  public func authStateSequence() -> MobileSyncAsyncSequence<AuthState> {
     MobileSyncAsyncSequence(asyncSequence(for: authStateFlow))
   }
 }
