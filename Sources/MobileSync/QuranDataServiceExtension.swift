@@ -3,10 +3,6 @@ internal import KMPNativeCoroutinesAsync
 import Shared
 
 public extension QuranDataService {
-  func bookmarksSequence() -> MobileSyncAsyncSequence<[AyahBookmark]> {
-    MobileSyncAsyncSequence(asyncSequence(for: bookmarks))
-  }
-
   func highlightsSequence() -> MobileSyncAsyncSequence<[AyahHighlight]> {
     MobileSyncAsyncSequence(asyncSequence(for: highlights))
   }
@@ -27,46 +23,6 @@ public extension QuranDataService {
 
   func notesSequence() -> MobileSyncAsyncSequence<[Note_]> {
     MobileSyncAsyncSequence(asyncSequence(for: notes))
-  }
-
-  func bookmarksForCollectionSequence(collectionId: String)
-    -> MobileSyncAsyncSequence<[CollectionAyahBookmark]>
-  {
-    MobileSyncAsyncSequence(
-      asyncSequence(for: getBookmarksForCollectionFlow(collectionId: collectionId))
-    )
-  }
-
-  func addAyahBookmark(sura: Int32, ayah: Int32) async throws -> AyahBookmark {
-    try await asyncFunction(for: addBookmark(sura: sura, ayah: ayah))
-  }
-
-  func addAyahBookmark(sura: Int32, ayah: Int32, timestamp: Date) async throws -> AyahBookmark {
-    try await asyncFunction(for: addBookmark(sura: sura, ayah: ayah, timestamp: timestamp))
-  }
-
-  func addAyahBookmark(sura: Int32, ayah: Int32, collectionIds: [String]) async throws
-    -> AyahBookmark
-  {
-    try await asyncFunction(
-      for: addBookmark(sura: sura, ayah: ayah, collectionIds: collectionIds)
-    )
-  }
-
-  func addAyahBookmark(
-    sura: Int32,
-    ayah: Int32,
-    collectionIds: [String],
-    timestamp: Date
-  ) async throws -> AyahBookmark {
-    try await asyncFunction(
-      for: addBookmark(
-        sura: sura,
-        ayah: ayah,
-        collectionIds: collectionIds,
-        timestamp: timestamp
-      )
-    )
   }
 
   func addAyahReadingBookmark(sura: Int32, ayah: Int32) async throws -> AyahReadingBookmark {
@@ -134,23 +90,6 @@ public extension QuranDataService {
     return deleted.boolValue
   }
 
-  func removeBookmark(_ bookmark: AyahBookmark) async throws -> Bool {
-    let deleted: KotlinBoolean = try await asyncFunction(for: deleteBookmark(bookmark: bookmark))
-    return deleted.boolValue
-  }
-
-  func removeBookmark(id: String) async throws -> Bool {
-    let deleted: KotlinBoolean = try await asyncFunction(for: deleteBookmark(id: id))
-    return deleted.boolValue
-  }
-
-  func removeBookmark(sura: Int32, ayah: Int32) async throws -> Bool {
-    let deleted: KotlinBoolean = try await asyncFunction(
-      for: deleteBookmark(sura: sura, ayah: ayah)
-    )
-    return deleted.boolValue
-  }
-
   func setAyahHighlight(sura: Int32, ayah: Int32, color: AyahHighlightColor) async throws
     -> AyahHighlight
   {
@@ -189,73 +128,6 @@ public extension QuranDataService {
     )
   }
 
-  func replaceBookmarkCollections(id: String, collectionIds: [String]) async throws -> Bool {
-    let changed: KotlinBoolean = try await asyncFunction(
-      for: replaceBookmarkCollections(id: id, collectionIds: collectionIds)
-    )
-    return changed.boolValue
-  }
-
-  func replaceBookmarkCollections(
-    id: String,
-    collectionIds: [String],
-    timestamp: Date
-  ) async throws -> Bool {
-    let changed: KotlinBoolean = try await asyncFunction(
-      for: replaceBookmarkCollections(id: id, collectionIds: collectionIds, timestamp: timestamp)
-    )
-    return changed.boolValue
-  }
-
-  func replaceAyahBookmarkCollections(
-    sura: Int32,
-    ayah: Int32,
-    collectionIds: [String]
-  ) async throws -> AyahBookmark {
-    try await asyncFunction(
-      for: replaceAyahBookmarkCollections(sura: sura, ayah: ayah, collectionIds: collectionIds)
-    )
-  }
-
-  func replaceAyahBookmarkCollections(
-    sura: Int32,
-    ayah: Int32,
-    collectionIds: [String],
-    timestamp: Date
-  ) async throws -> AyahBookmark {
-    try await asyncFunction(
-      for: replaceAyahBookmarkCollections(
-        sura: sura,
-        ayah: ayah,
-        collectionIds: collectionIds,
-        timestamp: timestamp
-      )
-    )
-  }
-
-  func addBookmarkToCollection(collectionId: String, bookmark: AyahBookmark) async throws {
-    _ = try await asyncFunction(
-      for: addBookmarkToCollection(
-        collectionId: collectionId,
-        bookmark: bookmark
-      )
-    )
-  }
-
-  func addBookmarkToCollection(
-    collectionId: String,
-    bookmark: AyahBookmark,
-    timestamp: Date
-  ) async throws {
-    _ = try await asyncFunction(
-      for: addBookmarkToCollection(
-        collectionId: collectionId,
-        bookmark: bookmark,
-        timestamp: timestamp
-      )
-    )
-  }
-
   func addAyahBookmarkToCollection(collectionId: String, sura: Int32, ayah: Int32) async throws
     -> CollectionAyahBookmark
   {
@@ -280,15 +152,6 @@ public extension QuranDataService {
         sura: sura,
         ayah: ayah,
         timestamp: timestamp
-      )
-    )
-  }
-
-  func removeBookmarkFromCollection(collectionId: String, bookmark: AyahBookmark) async throws {
-    _ = try await asyncFunction(
-      for: removeBookmarkFromCollection(
-        collectionId: collectionId,
-        bookmark: bookmark
       )
     )
   }
