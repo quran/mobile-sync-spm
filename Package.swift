@@ -9,8 +9,8 @@ let shimProductName = "MobileSync"
 
 let localBinaryPath = ProcessInfo.processInfo.environment["MOBILE_SYNC_XCFRAMEWORK_PATH"]?
   .trimmingCharacters(in: .whitespacesAndNewlines)
-let remoteVersion = "0.1.16"
-let remoteChecksum = "d074ed50168bccaaa7a7ec4e511020b9d4069d659cbee243f37c5af6fe9e89c6"
+let remoteVersion = "0.1.17"
+let remoteChecksum = "47c5c086f54d0ef20f6307315071f01fc0f9ba79457dc2cbc7d666f40a39f7c0"
 
 let binaryTarget: Target = {
   if let localBinaryPath, !localBinaryPath.isEmpty {
