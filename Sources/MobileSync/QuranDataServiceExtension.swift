@@ -7,8 +7,8 @@ public extension QuranDataService {
     MobileSyncAsyncSequence(asyncSequence(for: highlights))
   }
 
-  func readingBookmarkSequence() -> MobileSyncAsyncSequence<ReadingBookmark?> {
-    MobileSyncAsyncSequence(asyncSequence(for: readingBookmark))
+  func readingBookmarksSequence() -> MobileSyncAsyncSequence<[ReadingBookmark]> {
+    MobileSyncAsyncSequence(asyncSequence(for: readingBookmarks))
   }
 
   func readingSessionsSequence() -> MobileSyncAsyncSequence<[ReadingSession]> {
@@ -25,24 +25,37 @@ public extension QuranDataService {
     MobileSyncAsyncSequence(asyncSequence(for: notes))
   }
 
-  func addAyahReadingBookmark(sura: Int32, ayah: Int32) async throws -> AyahReadingBookmark {
-    try await asyncFunction(for: addAyahReadingBookmark(sura: sura, ayah: ayah))
+  func setAyahReadingBookmark(
+    slot: ReadingBookmarkSlot,
+    sura: Int32,
+    ayah: Int32
+  ) async throws -> ReadingBookmark {
+    try await asyncFunction(for: setAyahReadingBookmark(slot: slot, sura: sura, ayah: ayah))
   }
 
-  func addAyahReadingBookmark(sura: Int32, ayah: Int32, timestamp: Date) async throws
-    -> AyahReadingBookmark
-  {
+  func setAyahReadingBookmark(
+    slot: ReadingBookmarkSlot,
+    sura: Int32,
+    ayah: Int32,
+    timestamp: Date
+  ) async throws -> ReadingBookmark {
     try await asyncFunction(
-      for: addAyahReadingBookmark(sura: sura, ayah: ayah, timestamp: timestamp)
+      for: setAyahReadingBookmark(slot: slot, sura: sura, ayah: ayah, timestamp: timestamp)
     )
   }
 
-  func addPageReadingBookmark(page: Int32) async throws -> PageReadingBookmark {
-    try await asyncFunction(for: addPageReadingBookmark(page: page))
+  func setPageReadingBookmark(slot: ReadingBookmarkSlot, page: Int32) async throws
+    -> ReadingBookmark
+  {
+    try await asyncFunction(for: setPageReadingBookmark(slot: slot, page: page))
   }
 
-  func addPageReadingBookmark(page: Int32, timestamp: Date) async throws -> PageReadingBookmark {
-    try await asyncFunction(for: addPageReadingBookmark(page: page, timestamp: timestamp))
+  func setPageReadingBookmark(
+    slot: ReadingBookmarkSlot,
+    page: Int32,
+    timestamp: Date
+  ) async throws -> ReadingBookmark {
+    try await asyncFunction(for: setPageReadingBookmark(slot: slot, page: page, timestamp: timestamp))
   }
 
   func addReadingSession(sura: Int32, ayah: Int32) async throws -> ReadingSession {
@@ -85,9 +98,14 @@ public extension QuranDataService {
     return deleted.boolValue
   }
 
-  func removeReadingBookmark() async throws -> Bool {
-    let deleted: KotlinBoolean = try await asyncFunction(for: deleteReadingBookmark())
-    return deleted.boolValue
+  func clearReadingBookmark(slot: ReadingBookmarkSlot) async throws -> ReadingBookmark {
+    try await asyncFunction(for: clearReadingBookmark(slot: slot))
+  }
+
+  func clearReadingBookmark(slot: ReadingBookmarkSlot, timestamp: Date) async throws
+    -> ReadingBookmark
+  {
+    try await asyncFunction(for: clearReadingBookmark(slot: slot, timestamp: timestamp))
   }
 
   func setAyahHighlight(sura: Int32, ayah: Int32, color: AyahHighlightColor) async throws
