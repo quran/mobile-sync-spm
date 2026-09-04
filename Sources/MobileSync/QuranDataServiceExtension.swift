@@ -98,6 +98,10 @@ public extension QuranDataService {
     return deleted.boolValue
   }
 
+  func renameReadingBookmark(slot: ReadingBookmarkSlot, name: String?) async throws -> ReadingBookmark {
+    try await asyncFunction(for: renameReadingBookmark(slot: slot, name: name))
+  }
+
   func clearReadingBookmark(slot: ReadingBookmarkSlot) async throws -> ReadingBookmark {
     try await asyncFunction(for: clearReadingBookmark(slot: slot))
   }
