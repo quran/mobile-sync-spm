@@ -3,6 +3,22 @@ internal import KMPNativeCoroutinesAsync
 import Shared
 
 public extension QuranDataService {
+  /// Merges local data and optionally records handled content so later tracked imports skip it.
+  /// `deleteExisting` preserves import history and cannot be combined with `trackHistory`.
+  func importData(
+    data: PersistenceImportData,
+    deleteExisting: Bool = false,
+    trackHistory: Bool = false
+  ) async throws -> PersistenceImportResult {
+    try await asyncFunction(
+      for: importData(
+        data: data,
+        deleteExisting: deleteExisting,
+        trackHistory: trackHistory
+      )
+    )
+  }
+
   func highlightsSequence() -> MobileSyncAsyncSequence<[AyahHighlight]> {
     MobileSyncAsyncSequence(asyncSequence(for: highlights))
   }
