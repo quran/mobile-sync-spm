@@ -39,7 +39,7 @@ final class PersistenceImportIntegrationTests: XCTestCase {
     _ = try await database.service.importData(data: data, trackHistory: true)
     let notes = try await storedNotes()
     let note = try XCTUnwrap(notes.first)
-    try await database.service.removeNote(id: note.id)
+    try await database.service.deleteNote(id: note.id)
 
     let result = try await database.service.importData(data: data, trackHistory: true)
 
@@ -47,6 +47,32 @@ final class PersistenceImportIntegrationTests: XCTestCase {
     XCTAssertFalse(result.changed)
     let remainingNotes = try await storedNotes()
     XCTAssertTrue(remainingNotes.isEmpty)
+  }
+
+  func testDeleteNoteReportsWhetherANoteWasDeleted() async throws {
+    _ = try await database.service.importData(data: noteData())
+    let notes = try await storedNotes()
+    let note = try XCTUnwrap(notes.first)
+
+    let deleted = try await database.service.deleteNote(id: note.id)
+    let deletedAgain = try await database.service.deleteNote(id: note.id)
+
+    XCTAssertTrue(deleted)
+    XCTAssertFalse(deletedAgain)
+  }
+
+  func testRemoveAyahBookmarkFromCollectionByIDsReportsWhetherAMembershipWasRemoved() async throws {
+    let collection = try await database.service.createCollection(named: "Study")
+    let bookmark = try await database.service.addAyahBookmarkToCollection(
+      collectionId: collection.id, sura: 2, ayah: 255, timestamp: date(100))
+
+    let removed = try await database.service.removeAyahBookmarkFromCollection(
+      collectionId: collection.id, bookmarkId: bookmark.bookmarkId)
+    let removedAgain = try await database.service.removeAyahBookmarkFromCollection(
+      collectionId: collection.id, bookmarkId: bookmark.bookmarkId)
+
+    XCTAssertTrue(removed)
+    XCTAssertFalse(removedAgain)
   }
 
   func testReplacementCannotTrackHistoryAndPreservesDataOnFailure() async throws {
@@ -92,14 +118,14 @@ final class PersistenceImportIntegrationTests: XCTestCase {
   func testMembershipsShareParentAndBridgeDates() async throws {
     let data = importData(
       collections: [
-        ImportCollection(importId: "favorites", name: " favorites ", lastUpdated: date(200), createdAt: date(40)),
-        ImportCollection(importId: "study", name: "Study", lastUpdated: date(300), createdAt: date(60)),
+        ImportCollection(name: " favorites ", lastUpdated: date(200), createdAt: date(40)),
+        ImportCollection(name: "Study", lastUpdated: date(300), createdAt: date(60)),
       ],
       collectionBookmarks: [
         ImportCollectionAyahBookmark(
-          collectionImportId: "favorites", sura: 2, ayah: 255, lastUpdated: date(200), createdAt: date(50)),
+          collectionName: "FAVORITES", sura: 2, ayah: 255, lastUpdated: date(200), createdAt: date(50)),
         ImportCollectionAyahBookmark(
-          collectionImportId: "study", sura: 2, ayah: 255, lastUpdated: date(300), createdAt: date(75)),
+          collectionName: "Study", sura: 2, ayah: 255, lastUpdated: date(300), createdAt: date(75)),
       ]
     )
 
@@ -181,7 +207,7 @@ final class PersistenceImportIntegrationTests: XCTestCase {
     let data = importData(
       collectionBookmarks: [
         ImportCollectionAyahBookmark(
-          collectionImportId: "missing", sura: 2, ayah: 255, lastUpdated: date(100), createdAt: nil)
+          collectionName: "Missing", sura: 2, ayah: 255, lastUpdated: date(100), createdAt: nil)
       ],
       notes: [
         ImportNote(
