@@ -96,7 +96,7 @@ final class PersistenceImportIntegrationTests: XCTestCase {
   func testReadingBookmarkImportUsesCurrentSlotsAndSkipsTrackedReplay() async throws {
     let timestamp = Date(timeIntervalSince1970: 123)
     let bookmark = ImportReadingBookmark.Page(
-      page: 42, lastUpdated: timestamp, slot: .green, name: "Morning")
+      page: 42, lastUpdated: timestamp, slot: .teal, name: "Morning")
     let data = PersistenceImportData(
       collections: [], collectionBookmarks: [], readingSessions: [], notes: [],
       highlights: [], readingBookmarks: [bookmark])
@@ -109,7 +109,7 @@ final class PersistenceImportIntegrationTests: XCTestCase {
     XCTAssertFalse(replay.changed)
     let iterator = database.service.readingBookmarksSequence().makeAsyncIterator()
     let bookmarks = try await iterator.next()
-    let stored = try XCTUnwrap(bookmarks?.first { $0.slot == .green } as? PageReadingBookmark)
+    let stored = try XCTUnwrap(bookmarks?.first { $0.slot == .teal } as? PageReadingBookmark)
     XCTAssertEqual(stored.page, 42)
     XCTAssertEqual(stored.name, "Morning")
     XCTAssertEqual(stored.lastUpdated, timestamp)
