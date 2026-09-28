@@ -134,11 +134,11 @@ public extension QuranDataService {
     try await asyncFunction(for: setHighlight(sura: sura, ayah: ayah, color: color))
   }
 
-  func removeAyahHighlight(sura: Int32, ayah: Int32) async throws -> Bool {
-    let removed: KotlinBoolean = try await asyncFunction(
-      for: removeHighlight(sura: sura, ayah: ayah)
+  func deleteAyahHighlight(sura: Int32, ayah: Int32) async throws -> Bool {
+    let deleted: KotlinBoolean = try await asyncFunction(
+      for: deleteHighlight(sura: sura, ayah: ayah)
     )
-    return removed.boolValue
+    return deleted.boolValue
   }
 
   func createCollection(named name: String) async throws -> BookmarkCollection {
@@ -220,12 +220,12 @@ public extension QuranDataService {
     )
   }
 
-  func removeAyahBookmarkFromCollection(_ bookmark: CollectionAyahBookmark) async throws {
-    _ = try await asyncFunction(
-      for: removeAyahBookmarkFromCollection(
-        bookmark: bookmark
-      )
+  @discardableResult
+  func removeAyahBookmarkFromCollection(collectionId: String, bookmarkId: String) async throws -> Bool {
+    let removed: KotlinBoolean = try await asyncFunction(
+      for: removeAyahBookmarkFromCollection(collectionId: collectionId, bookmarkId: bookmarkId)
     )
+    return removed.boolValue
   }
 
   func createNote(
@@ -308,8 +308,10 @@ public extension QuranDataService {
     )
   }
 
-  func removeNote(id: String) async throws {
-    _ = try await asyncFunction(for: deleteNote(id: id))
+  @discardableResult
+  func deleteNote(id: String) async throws -> Bool {
+    let deleted: KotlinBoolean = try await asyncFunction(for: deleteNote(id: id))
+    return deleted.boolValue
   }
 
   func logout(clearLocalData: Bool) async throws {
