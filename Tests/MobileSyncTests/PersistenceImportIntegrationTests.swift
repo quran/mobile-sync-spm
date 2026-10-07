@@ -15,6 +15,12 @@ final class PersistenceImportIntegrationTests: XCTestCase {
     try await super.tearDown()
   }
 
+  func testOpenDatabaseReusesTheGraphDatabase() throws {
+    // setUp already opened the database through the graph.
+    try SharedDependencyGraph.shared.openDatabase(using: DriverFactory())
+    try SharedDependencyGraph.shared.openDatabase(using: DriverFactory())
+  }
+
   func testDefaultImportDoesNotRecordHistory() async throws {
     let data = noteData()
 
