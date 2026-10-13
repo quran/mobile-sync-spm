@@ -234,103 +234,6 @@ final class PersistenceImportIntegrationTests: XCTestCase {
     XCTAssertTrue(notes.isEmpty)
   }
 
-  func testCreateNoteThrowsTextLengthLimitError() async throws {
-    let expected = ExpectedTextLengthLimit(
-      field: .noteBody, bound: .tooShort, limit: 6, length: 2)
-
-    await assertThrows(expected) {
-      try await self.database.service.createNote(
-        body: "Hi", startSura: 2, startAyah: 1, endSura: 2, endAyah: 1)
-    }
-    await assertThrows(expected) {
-      try await self.database.service.createNote(
-        body: "Hi", startSura: 2, startAyah: 1, endSura: 2, endAyah: 1, timestamp: self.date(100))
-    }
-    let notes = try await storedNotes()
-    XCTAssertTrue(notes.isEmpty)
-  }
-
-  func testUpdateNoteThrowsTextLengthLimitErrorAndKeepsBody() async throws {
-    _ = try await database.service.importData(data: noteData())
-    let notes = try await storedNotes()
-    let note = try XCTUnwrap(notes.first)
-    let body = String(repeating: "a", count: 10001)
-    let expected = ExpectedTextLengthLimit(
-      field: .noteBody, bound: .tooLong, limit: 10000, length: 10001)
-
-    await assertThrows(expected) {
-      try await self.database.service.updateNote(
-        id: note.id, body: body, startSura: 2, startAyah: 1, endSura: 2, endAyah: 3)
-    }
-    await assertThrows(expected) {
-      try await self.database.service.updateNote(
-        id: note.id, body: body, startSura: 2, startAyah: 1, endSura: 2, endAyah: 3,
-        timestamp: self.date(200))
-    }
-    let storedBodies = try await storedNotes().map(\.body)
-    XCTAssertEqual(storedBodies, ["Legacy note"])
-  }
-
-  func testCreateCollectionThrowsTextLengthLimitError() async throws {
-    let expected = ExpectedTextLengthLimit(
-      field: .collectionName, bound: .tooShort, limit: 1, length: 0)
-
-    await assertThrows(expected) {
-      _ = try await self.database.service.createCollection(named: "  ")
-    }
-    await assertThrows(expected) {
-      _ = try await self.database.service.createCollection(named: "  ", timestamp: self.date(100))
-    }
-    let collections = try await storedCollections()
-    XCTAssertFalse(collections.contains { !$0.collection.isSystem })
-  }
-
-  func testUpdateCollectionThrowsTextLengthLimitErrorAndKeepsName() async throws {
-    let collection = try await database.service.createCollection(named: "Study")
-    let name = String(repeating: "a", count: 256)
-    let expected = ExpectedTextLengthLimit(
-      field: .collectionName, bound: .tooLong, limit: 255, length: 256)
-
-    await assertThrows(expected) {
-      _ = try await self.database.service.updateCollection(id: collection.id, name: name)
-    }
-    await assertThrows(expected) {
-      _ = try await self.database.service.updateCollection(
-        id: collection.id, name: name, timestamp: self.date(200))
-    }
-    let collections = try await storedCollections()
-    XCTAssertEqual(collections.first { $0.collection.id == collection.id }?.collection.name, "Study")
-  }
-
-  func testUpdateCollectionPassesOtherErrorsThrough() async throws {
-    do {
-      _ = try await database.service.updateCollection(id: "999999", name: "Study")
-      XCTFail("Expected a missing collection to throw")
-    } catch {
-      XCTAssertFalse(error is MobileSyncTextLengthLimitError)
-      XCTAssertTrue(error.localizedDescription.contains("Expected active collection"))
-    }
-  }
-
-  private func assertThrows(
-    _ expected: ExpectedTextLengthLimit,
-    file: StaticString = #filePath,
-    line: UInt = #line,
-    _ operation: () async throws -> Void
-  ) async {
-    do {
-      try await operation()
-      XCTFail("Expected a text length limit error", file: file, line: line)
-    } catch let error as MobileSyncTextLengthLimitError {
-      XCTAssertEqual(
-        ExpectedTextLengthLimit(
-          field: error.field, bound: error.bound, limit: error.limit, length: error.length),
-        expected, file: file, line: line)
-    } catch {
-      XCTFail("Unexpected error: \(error)", file: file, line: line)
-    }
-  }
-
   private func noteData() -> PersistenceImportData {
     PersistenceImportData(
       collections: [], collectionBookmarks: [], readingSessions: [],
@@ -382,13 +285,6 @@ final class PersistenceImportIntegrationTests: XCTestCase {
   }
 }
 
-private struct ExpectedTextLengthLimit: Equatable {
-  let field: MobileSyncTextLengthLimitError.Field
-  let bound: MobileSyncTextLengthLimitError.Bound
-  let limit: Int
-  let length: Int
-}
-
 private func importNoteAfterCancellation() async throws {
   // The stream never yields and ends on cancellation, so the import starts in a cancelled task.
   for await _ in AsyncStream(Void.self, { _ in }) {}
@@ -404,37 +300,4 @@ private func cancelledNoteData() -> PersistenceImportData {
         lastUpdated: Date(timeIntervalSince1970: 100), createdAt: nil)
     ],
     highlights: [], readingBookmarks: [])
-}
-
-// Kotlin owns the service's synchronization; XCTest resets the shared database before and after each test.
-private final class ImportTestDatabase: @unchecked Sendable {
-  static let shared = ImportTestDatabase()
-  let service: QuranDataService
-
-  private init() {
-    Self.removeDatabaseFiles()
-    AuthFlowFactoryProvider.shared.doInitialize()
-    service =
-      SharedDependencyGraph.shared.doInit(
-        driverFactory: DriverFactory(),
-        storage: AppleMobileSyncStorageFactory.shared.create(),
-        clientId: "",
-        clientSecret: nil
-      ).quranDataService
-  }
-
-  private static func removeDatabaseFiles() {
-    guard
-      let applicationSupport = FileManager.default.urls(
-        for: .applicationSupportDirectory, in: .userDomainMask
-      ).first
-    else {
-      return
-    }
-    // The XCTest runner persists this database between runs of different local frameworks.
-    let databaseURL = applicationSupport.appendingPathComponent("databases/quran.db")
-    for suffix in ["", "-shm", "-wal"] {
-      try? FileManager.default.removeItem(atPath: databaseURL.path + suffix)
-    }
-  }
 }

@@ -3,13 +3,13 @@ import Shared
 
 /// A note body or collection name outside the server's length limits.
 public struct MobileSyncTextLengthLimitError: Error, Equatable, Sendable {
-  /// The text that is out of bounds.
+  /// Which text is out of bounds.
   public enum Field: Equatable, Sendable {
     case noteBody
     case collectionName
   }
 
-  /// Whether the text is under the minimum or over the maximum.
+  /// Which length limit was crossed.
   public enum Bound: Equatable, Sendable {
     case tooShort
     case tooLong
@@ -23,7 +23,9 @@ public struct MobileSyncTextLengthLimitError: Error, Equatable, Sendable {
   public let limit: Int
   /// The length as the server measures it: trimmed, HTML-escaped, in UTF-16 code units.
   public let length: Int
+}
 
+extension MobileSyncTextLengthLimitError {
   init?(bridgedError error: Error) {
     guard
       let exception = (error as NSError).userInfo["KotlinException"] as? TextLengthLimitException,
@@ -56,14 +58,5 @@ extension MobileSyncTextLengthLimitError.Bound {
     case .tooLong: self = .tooLong
     default: return nil
     }
-  }
-}
-
-/// Rethrows a bridged `TextLengthLimitException` as `MobileSyncTextLengthLimitError`.
-func mappingTextLengthLimit<T>(_ operation: () async throws -> T) async throws -> T {
-  do {
-    return try await operation()
-  } catch {
-    throw MobileSyncTextLengthLimitError(bridgedError: error) ?? error
   }
 }

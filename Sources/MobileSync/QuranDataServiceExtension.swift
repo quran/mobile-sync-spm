@@ -342,3 +342,12 @@ public extension QuranDataService {
     _ = try await asyncFunction(for: logout(clearLocalData: clearLocalData))
   }
 }
+
+/// Rethrows a bridged `TextLengthLimitException` as `MobileSyncTextLengthLimitError`.
+private func mappingTextLengthLimit<T>(_ operation: () async throws -> T) async throws -> T {
+  do {
+    return try await operation()
+  } catch {
+    throw MobileSyncTextLengthLimitError(bridgedError: error) ?? error
+  }
+}
