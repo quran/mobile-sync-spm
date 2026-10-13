@@ -141,12 +141,18 @@ public extension QuranDataService {
     return deleted.boolValue
   }
 
+  /// - Throws: `MobileSyncTextLengthLimitError` when the name is outside the length limits.
   func createCollection(named name: String) async throws -> BookmarkCollection {
-    try await asyncFunction(for: addCollection(name: name))
+    try await mappingTextLengthLimit {
+      try await asyncFunction(for: addCollection(name: name))
+    }
   }
 
+  /// - Throws: `MobileSyncTextLengthLimitError` when the name is outside the length limits.
   func createCollection(named name: String, timestamp: Date) async throws -> BookmarkCollection {
-    try await asyncFunction(for: addCollection(name: name, timestamp: timestamp))
+    try await mappingTextLengthLimit {
+      try await asyncFunction(for: addCollection(name: name, timestamp: timestamp))
+    }
   }
 
   func removeCollection(id: String) async throws -> Bool {
@@ -154,16 +160,22 @@ public extension QuranDataService {
     return deleted.boolValue
   }
 
+  /// - Throws: `MobileSyncTextLengthLimitError` when the name is outside the length limits.
   func updateCollection(id: String, name: String) async throws -> BookmarkCollection {
-    try await asyncFunction(for: updateCollection(id: id, name: name))
+    try await mappingTextLengthLimit {
+      try await asyncFunction(for: updateCollection(id: id, name: name))
+    }
   }
 
+  /// - Throws: `MobileSyncTextLengthLimitError` when the name is outside the length limits.
   func updateCollection(id: String, name: String, timestamp: Date) async throws
     -> BookmarkCollection
   {
-    try await asyncFunction(
-      for: updateCollection(id: id, name: name, timestamp: timestamp)
-    )
+    try await mappingTextLengthLimit {
+      try await asyncFunction(
+        for: updateCollection(id: id, name: name, timestamp: timestamp)
+      )
+    }
   }
 
   func replaceAyahBookmarkCollections(
@@ -228,6 +240,7 @@ public extension QuranDataService {
     return removed.boolValue
   }
 
+  /// - Throws: `MobileSyncTextLengthLimitError` when the body is outside the length limits.
   func createNote(
     body: String,
     startSura: Int32,
@@ -235,17 +248,20 @@ public extension QuranDataService {
     endSura: Int32,
     endAyah: Int32
   ) async throws {
-    _ = try await asyncFunction(
-      for: addNote(
-        body: body,
-        startSura: startSura,
-        startAyah: startAyah,
-        endSura: endSura,
-        endAyah: endAyah
+    _ = try await mappingTextLengthLimit {
+      try await asyncFunction(
+        for: addNote(
+          body: body,
+          startSura: startSura,
+          startAyah: startAyah,
+          endSura: endSura,
+          endAyah: endAyah
+        )
       )
-    )
+    }
   }
 
+  /// - Throws: `MobileSyncTextLengthLimitError` when the body is outside the length limits.
   func createNote(
     body: String,
     startSura: Int32,
@@ -254,18 +270,21 @@ public extension QuranDataService {
     endAyah: Int32,
     timestamp: Date
   ) async throws {
-    _ = try await asyncFunction(
-      for: addNote(
-        body: body,
-        startSura: startSura,
-        startAyah: startAyah,
-        endSura: endSura,
-        endAyah: endAyah,
-        timestamp: timestamp
+    _ = try await mappingTextLengthLimit {
+      try await asyncFunction(
+        for: addNote(
+          body: body,
+          startSura: startSura,
+          startAyah: startAyah,
+          endSura: endSura,
+          endAyah: endAyah,
+          timestamp: timestamp
+        )
       )
-    )
+    }
   }
 
+  /// - Throws: `MobileSyncTextLengthLimitError` when the body is outside the length limits.
   func updateNote(
     id: String,
     body: String,
@@ -274,18 +293,21 @@ public extension QuranDataService {
     endSura: Int32,
     endAyah: Int32
   ) async throws {
-    _ = try await asyncFunction(
-      for: updateNote(
-        id: id,
-        body: body,
-        startSura: startSura,
-        startAyah: startAyah,
-        endSura: endSura,
-        endAyah: endAyah
+    _ = try await mappingTextLengthLimit {
+      try await asyncFunction(
+        for: updateNote(
+          id: id,
+          body: body,
+          startSura: startSura,
+          startAyah: startAyah,
+          endSura: endSura,
+          endAyah: endAyah
+        )
       )
-    )
+    }
   }
 
+  /// - Throws: `MobileSyncTextLengthLimitError` when the body is outside the length limits.
   func updateNote(
     id: String,
     body: String,
@@ -295,17 +317,19 @@ public extension QuranDataService {
     endAyah: Int32,
     timestamp: Date
   ) async throws {
-    _ = try await asyncFunction(
-      for: updateNote(
-        id: id,
-        body: body,
-        startSura: startSura,
-        startAyah: startAyah,
-        endSura: endSura,
-        endAyah: endAyah,
-        timestamp: timestamp
+    _ = try await mappingTextLengthLimit {
+      try await asyncFunction(
+        for: updateNote(
+          id: id,
+          body: body,
+          startSura: startSura,
+          startAyah: startAyah,
+          endSura: endSura,
+          endAyah: endAyah,
+          timestamp: timestamp
+        )
       )
-    )
+    }
   }
 
   @discardableResult
