@@ -37,7 +37,7 @@ public extension QuranDataService {
     MobileSyncAsyncSequence(asyncSequence(for: collectionsWithBookmarks))
   }
 
-  func notesSequence() -> MobileSyncAsyncSequence<[Note_]> {
+  func notesSequence() -> MobileSyncAsyncSequence<[Note]> {
     MobileSyncAsyncSequence(asyncSequence(for: notes))
   }
 
@@ -284,51 +284,21 @@ public extension QuranDataService {
     }
   }
 
-  /// - Throws: `MobileSyncTextLengthLimitError` when the body is outside the length limits.
-  func updateNote(
-    id: String,
-    body: String,
-    startSura: Int32,
-    startAyah: Int32,
-    endSura: Int32,
-    endAyah: Int32
-  ) async throws {
+  /// Updates a note's body. A note's verse ranges never change.
+  ///
+  /// - Throws: `MobileSyncTextLengthLimitError` when a changed body is outside the length limits.
+  func updateNote(id: String, body: String) async throws {
     _ = try await mappingTextLengthLimit {
-      try await asyncFunction(
-        for: updateNote(
-          id: id,
-          body: body,
-          startSura: startSura,
-          startAyah: startAyah,
-          endSura: endSura,
-          endAyah: endAyah
-        )
-      )
+      try await asyncFunction(for: updateNote(id: id, body: body))
     }
   }
 
-  /// - Throws: `MobileSyncTextLengthLimitError` when the body is outside the length limits.
-  func updateNote(
-    id: String,
-    body: String,
-    startSura: Int32,
-    startAyah: Int32,
-    endSura: Int32,
-    endAyah: Int32,
-    timestamp: Date
-  ) async throws {
+  /// Updates a note's body. A note's verse ranges never change.
+  ///
+  /// - Throws: `MobileSyncTextLengthLimitError` when a changed body is outside the length limits.
+  func updateNote(id: String, body: String, timestamp: Date) async throws {
     _ = try await mappingTextLengthLimit {
-      try await asyncFunction(
-        for: updateNote(
-          id: id,
-          body: body,
-          startSura: startSura,
-          startAyah: startAyah,
-          endSura: endSura,
-          endAyah: endAyah,
-          timestamp: timestamp
-        )
-      )
+      try await asyncFunction(for: updateNote(id: id, body: body, timestamp: timestamp))
     }
   }
 

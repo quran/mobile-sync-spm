@@ -41,7 +41,8 @@ final class PersistenceImportIntegrationTests: XCTestCase {
   }
 
   func testTrackedImportDoesNotRestoreDeletedNote() async throws {
-    let data = noteData()
+    // A logout keeps the import history, so a body other tests track would already be processed.
+    let data = noteData(body: "Deleted legacy note")
     _ = try await database.service.importData(data: data, trackHistory: true)
     let notes = try await storedNotes()
     let note = try XCTUnwrap(notes.first)
@@ -234,12 +235,12 @@ final class PersistenceImportIntegrationTests: XCTestCase {
     XCTAssertTrue(notes.isEmpty)
   }
 
-  private func noteData() -> PersistenceImportData {
+  private func noteData(body: String = "Legacy note") -> PersistenceImportData {
     PersistenceImportData(
       collections: [], collectionBookmarks: [], readingSessions: [],
       notes: [
         ImportNote(
-          body: "Legacy note", startSura: 2, startAyah: 1, endSura: 2, endAyah: 3,
+          body: body, startSura: 2, startAyah: 1, endSura: 2, endAyah: 3,
           lastUpdated: Date(timeIntervalSince1970: 100),
           createdAt: Date(timeIntervalSince1970: 50)
         )
@@ -264,7 +265,7 @@ final class PersistenceImportIntegrationTests: XCTestCase {
     Date(timeIntervalSince1970: seconds)
   }
 
-  private func storedNotes() async throws -> [Note_] {
+  private func storedNotes() async throws -> [Note] {
     let iterator = database.service.notesSequence().makeAsyncIterator()
     return try await iterator.next() ?? []
   }
