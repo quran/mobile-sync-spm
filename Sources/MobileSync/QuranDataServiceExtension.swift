@@ -37,7 +37,7 @@ public extension QuranDataService {
     MobileSyncAsyncSequence(asyncSequence(for: collectionsWithBookmarks))
   }
 
-  func notesSequence() -> MobileSyncAsyncSequence<[Note_]> {
+  func notesSequence() -> MobileSyncAsyncSequence<[Note]> {
     MobileSyncAsyncSequence(asyncSequence(for: notes))
   }
 
@@ -141,37 +141,48 @@ public extension QuranDataService {
     return deleted.boolValue
   }
 
-  /// - Throws: `MobileSyncTextLengthLimitError` when the name is outside the length limits.
+  /// - Throws: `MobileSyncReservedCollectionNameError` when the name is reserved, and
+  ///   `MobileSyncTextLengthLimitError` when the name is outside the length limits.
   func createCollection(named name: String) async throws -> BookmarkCollection {
-    try await mappingTextLengthLimit {
+    try await mappingCollectionErrors {
       try await asyncFunction(for: addCollection(name: name))
     }
   }
 
-  /// - Throws: `MobileSyncTextLengthLimitError` when the name is outside the length limits.
+  /// - Throws: `MobileSyncReservedCollectionNameError` when the name is reserved, and
+  ///   `MobileSyncTextLengthLimitError` when the name is outside the length limits.
   func createCollection(named name: String, timestamp: Date) async throws -> BookmarkCollection {
-    try await mappingTextLengthLimit {
+    try await mappingCollectionErrors {
       try await asyncFunction(for: addCollection(name: name, timestamp: timestamp))
     }
   }
 
+  /// - Throws: `MobileSyncReadOnlyCollectionError` when the collection can't be deleted.
   func removeCollection(id: String) async throws -> Bool {
-    let deleted: KotlinBoolean = try await asyncFunction(for: deleteCollection(id: id))
+    let deleted: KotlinBoolean = try await mappingCollectionErrors {
+      try await asyncFunction(for: deleteCollection(id: id))
+    }
     return deleted.boolValue
   }
 
-  /// - Throws: `MobileSyncTextLengthLimitError` when the name is outside the length limits.
+  /// - Throws: `MobileSyncReadOnlyCollectionError` when the collection can't be renamed,
+  ///   `MobileSyncReservedCollectionNameError` when the name is reserved,
+  ///   `MobileSyncDuplicateCollectionNameError` when another collection has the name, and
+  ///   `MobileSyncTextLengthLimitError` when the name is outside the length limits.
   func updateCollection(id: String, name: String) async throws -> BookmarkCollection {
-    try await mappingTextLengthLimit {
+    try await mappingCollectionErrors {
       try await asyncFunction(for: updateCollection(id: id, name: name))
     }
   }
 
-  /// - Throws: `MobileSyncTextLengthLimitError` when the name is outside the length limits.
+  /// - Throws: `MobileSyncReadOnlyCollectionError` when the collection can't be renamed,
+  ///   `MobileSyncReservedCollectionNameError` when the name is reserved,
+  ///   `MobileSyncDuplicateCollectionNameError` when another collection has the name, and
+  ///   `MobileSyncTextLengthLimitError` when the name is outside the length limits.
   func updateCollection(id: String, name: String, timestamp: Date) async throws
     -> BookmarkCollection
   {
-    try await mappingTextLengthLimit {
+    try await mappingCollectionErrors {
       try await asyncFunction(
         for: updateCollection(id: id, name: name, timestamp: timestamp)
       )
@@ -284,51 +295,21 @@ public extension QuranDataService {
     }
   }
 
-  /// - Throws: `MobileSyncTextLengthLimitError` when the body is outside the length limits.
-  func updateNote(
-    id: String,
-    body: String,
-    startSura: Int32,
-    startAyah: Int32,
-    endSura: Int32,
-    endAyah: Int32
-  ) async throws {
+  /// Updates a note's body. A note's verse ranges never change.
+  ///
+  /// - Throws: `MobileSyncTextLengthLimitError` when a changed body is outside the length limits.
+  func updateNote(id: String, body: String) async throws {
     _ = try await mappingTextLengthLimit {
-      try await asyncFunction(
-        for: updateNote(
-          id: id,
-          body: body,
-          startSura: startSura,
-          startAyah: startAyah,
-          endSura: endSura,
-          endAyah: endAyah
-        )
-      )
+      try await asyncFunction(for: updateNote(id: id, body: body))
     }
   }
 
-  /// - Throws: `MobileSyncTextLengthLimitError` when the body is outside the length limits.
-  func updateNote(
-    id: String,
-    body: String,
-    startSura: Int32,
-    startAyah: Int32,
-    endSura: Int32,
-    endAyah: Int32,
-    timestamp: Date
-  ) async throws {
+  /// Updates a note's body. A note's verse ranges never change.
+  ///
+  /// - Throws: `MobileSyncTextLengthLimitError` when a changed body is outside the length limits.
+  func updateNote(id: String, body: String, timestamp: Date) async throws {
     _ = try await mappingTextLengthLimit {
-      try await asyncFunction(
-        for: updateNote(
-          id: id,
-          body: body,
-          startSura: startSura,
-          startAyah: startAyah,
-          endSura: endSura,
-          endAyah: endAyah,
-          timestamp: timestamp
-        )
-      )
+      try await asyncFunction(for: updateNote(id: id, body: body, timestamp: timestamp))
     }
   }
 
@@ -349,5 +330,20 @@ private func mappingTextLengthLimit<T>(_ operation: () async throws -> T) async 
     return try await operation()
   } catch {
     throw MobileSyncTextLengthLimitError(bridgedError: error) ?? error
+  }
+}
+
+/// Rethrows a bridged collection or text length exception as its Swift-native error.
+private func mappingCollectionErrors<T>(_ operation: () async throws -> T) async throws -> T {
+  do {
+    return try await mappingTextLengthLimit(operation)
+  } catch {
+    if let readOnly = MobileSyncReadOnlyCollectionError(bridgedError: error) {
+      throw readOnly
+    }
+    if let reserved = MobileSyncReservedCollectionNameError(bridgedError: error) {
+      throw reserved
+    }
+    throw MobileSyncDuplicateCollectionNameError(bridgedError: error) ?? error
   }
 }

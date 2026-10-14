@@ -41,13 +41,11 @@ final class TextLengthLimitIntegrationTests: XCTestCase {
       field: .noteBody, bound: .tooLong, limit: 10000, length: 10001)
 
     await assertThrows(expected) {
-      try await self.database.service.updateNote(
-        id: note.id, body: body, startSura: 2, startAyah: 1, endSura: 2, endAyah: 3)
+      try await self.database.service.updateNote(id: note.id, body: body)
     }
     await assertThrows(expected) {
       try await self.database.service.updateNote(
-        id: note.id, body: body, startSura: 2, startAyah: 1, endSura: 2, endAyah: 3,
-        timestamp: self.date(200))
+        id: note.id, body: body, timestamp: self.date(200))
     }
     let storedBodies = try await storedNotes().map(\.body)
     XCTAssertEqual(storedBodies, ["Legacy note"])
@@ -124,7 +122,7 @@ final class TextLengthLimitIntegrationTests: XCTestCase {
     Date(timeIntervalSince1970: seconds)
   }
 
-  private func storedNotes() async throws -> [Note_] {
+  private func storedNotes() async throws -> [Note] {
     let iterator = database.service.notesSequence().makeAsyncIterator()
     return try await iterator.next() ?? []
   }
