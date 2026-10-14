@@ -53,6 +53,29 @@ final class CollectionErrorIntegrationTests: XCTestCase {
     XCTAssertTrue(storedNames.contains(favorites.collection.name))
   }
 
+  func testCreateAndRenameThrowReservedNameError() async throws {
+    let collection = try await database.service.createCollection(named: "Study")
+    let reserved = MobileSyncReservedCollectionNameError(name: "system:notes")
+
+    await assertThrows(reserved) {
+      _ = try await self.database.service.createCollection(named: "system:notes")
+    }
+    await assertThrows(reserved) {
+      _ = try await self.database.service.createCollection(
+        named: "system:notes", timestamp: Date(timeIntervalSince1970: 100))
+    }
+    await assertThrows(MobileSyncReservedCollectionNameError(name: "Favorites")) {
+      _ = try await self.database.service.updateCollection(id: collection.id, name: "Favorites")
+    }
+    await assertThrows(reserved) {
+      _ = try await self.database.service.updateCollection(
+        id: collection.id, name: "system:notes", timestamp: Date(timeIntervalSince1970: 200))
+    }
+    let names = try await storedCollections().map(\.collection.name)
+    XCTAssertTrue(names.contains("Study"))
+    XCTAssertFalse(names.contains("system:notes"))
+  }
+
   private func assertThrows<E: Error & Equatable>(
     _ expected: E,
     file: StaticString = #filePath,

@@ -14,6 +14,13 @@ public struct MobileSyncDuplicateCollectionNameError: Error, Equatable, Sendable
   public let name: String
 }
 
+/// Creating or renaming a collection with a name users can't give one: Favorites, and the server's reserved
+/// `system:` names.
+public struct MobileSyncReservedCollectionNameError: Error, Equatable, Sendable {
+  /// The reserved name.
+  public let name: String
+}
+
 extension MobileSyncReadOnlyCollectionError {
   init?(bridgedError error: Error) {
     guard
@@ -30,6 +37,18 @@ extension MobileSyncDuplicateCollectionNameError {
     guard
       let exception = (error as NSError).userInfo["KotlinException"]
         as? DuplicateCollectionNameException
+    else {
+      return nil
+    }
+    name = exception.name
+  }
+}
+
+extension MobileSyncReservedCollectionNameError {
+  init?(bridgedError error: Error) {
+    guard
+      let exception = (error as NSError).userInfo["KotlinException"]
+        as? ReservedCollectionNameException
     else {
       return nil
     }

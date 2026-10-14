@@ -141,16 +141,18 @@ public extension QuranDataService {
     return deleted.boolValue
   }
 
-  /// - Throws: `MobileSyncTextLengthLimitError` when the name is outside the length limits.
+  /// - Throws: `MobileSyncReservedCollectionNameError` when the name is reserved, and
+  ///   `MobileSyncTextLengthLimitError` when the name is outside the length limits.
   func createCollection(named name: String) async throws -> BookmarkCollection {
-    try await mappingTextLengthLimit {
+    try await mappingCollectionErrors {
       try await asyncFunction(for: addCollection(name: name))
     }
   }
 
-  /// - Throws: `MobileSyncTextLengthLimitError` when the name is outside the length limits.
+  /// - Throws: `MobileSyncReservedCollectionNameError` when the name is reserved, and
+  ///   `MobileSyncTextLengthLimitError` when the name is outside the length limits.
   func createCollection(named name: String, timestamp: Date) async throws -> BookmarkCollection {
-    try await mappingTextLengthLimit {
+    try await mappingCollectionErrors {
       try await asyncFunction(for: addCollection(name: name, timestamp: timestamp))
     }
   }
@@ -164,6 +166,7 @@ public extension QuranDataService {
   }
 
   /// - Throws: `MobileSyncReadOnlyCollectionError` when the collection can't be renamed,
+  ///   `MobileSyncReservedCollectionNameError` when the name is reserved,
   ///   `MobileSyncDuplicateCollectionNameError` when another collection has the name, and
   ///   `MobileSyncTextLengthLimitError` when the name is outside the length limits.
   func updateCollection(id: String, name: String) async throws -> BookmarkCollection {
@@ -173,6 +176,7 @@ public extension QuranDataService {
   }
 
   /// - Throws: `MobileSyncReadOnlyCollectionError` when the collection can't be renamed,
+  ///   `MobileSyncReservedCollectionNameError` when the name is reserved,
   ///   `MobileSyncDuplicateCollectionNameError` when another collection has the name, and
   ///   `MobileSyncTextLengthLimitError` when the name is outside the length limits.
   func updateCollection(id: String, name: String, timestamp: Date) async throws
@@ -336,6 +340,9 @@ private func mappingCollectionErrors<T>(_ operation: () async throws -> T) async
   } catch {
     if let readOnly = MobileSyncReadOnlyCollectionError(bridgedError: error) {
       throw readOnly
+    }
+    if let reserved = MobileSyncReservedCollectionNameError(bridgedError: error) {
+      throw reserved
     }
     throw MobileSyncDuplicateCollectionNameError(bridgedError: error) ?? error
   }

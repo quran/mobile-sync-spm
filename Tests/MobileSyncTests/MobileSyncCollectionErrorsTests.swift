@@ -23,16 +23,27 @@ final class MobileSyncCollectionErrorsTests: XCTestCase {
     XCTAssertNil(MobileSyncReadOnlyCollectionError(bridgedError: error))
   }
 
+  func testMapsReservedCollectionName() {
+    let error = bridgedError(ReservedCollectionNameException(name: "system:bookmarks"))
+
+    XCTAssertEqual(
+      MobileSyncReservedCollectionNameError(bridgedError: error),
+      MobileSyncReservedCollectionNameError(name: "system:bookmarks"))
+    XCTAssertNil(MobileSyncDuplicateCollectionNameError(bridgedError: error))
+  }
+
   func testIgnoresOtherKotlinExceptions() {
     let error = bridgedError(KotlinIllegalArgumentException(message: "Collection is invalid"))
 
     XCTAssertNil(MobileSyncReadOnlyCollectionError(bridgedError: error))
     XCTAssertNil(MobileSyncDuplicateCollectionNameError(bridgedError: error))
+    XCTAssertNil(MobileSyncReservedCollectionNameError(bridgedError: error))
   }
 
   func testIgnoresErrorsWithoutAKotlinException() {
     XCTAssertNil(MobileSyncReadOnlyCollectionError(bridgedError: CancellationError()))
     XCTAssertNil(MobileSyncDuplicateCollectionNameError(bridgedError: CancellationError()))
+    XCTAssertNil(MobileSyncReservedCollectionNameError(bridgedError: CancellationError()))
   }
 
   private func bridgedError(_ exception: KotlinException) -> NSError {
