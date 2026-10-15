@@ -1,5 +1,5 @@
 import Foundation
-import Shared
+internal import Shared
 
 /// Renaming or deleting a collection users can't change: Favorites, the highlight collections, and the color
 /// collections older Quran.com apps created, which the server protects.

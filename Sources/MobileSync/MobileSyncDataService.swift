@@ -1,0 +1,308 @@
+import Foundation
+internal import KMPNativeCoroutinesAsync
+internal import Shared
+
+/// Reads and writes Quran user data, and syncs it when the user is signed in.
+///
+/// Reads and writes throw `CancellationError` when cancelled, ``MobileSyncTextLengthLimitError`` when
+/// a note body or collection name is outside the length limits, the collection errors documented on
+/// each collection write, and ``MobileSyncDataError`` otherwise.
+/// Observation sequences end when their task is cancelled and leave out values this package doesn't
+/// know yet, such as a new highlight color. Writes default `timestamp` to now.
+public struct MobileSyncDataService: @unchecked Sendable {
+  // MobileSync synchronizes the service internally.
+  let service: QuranDataService
+
+  init(_ service: QuranDataService) {
+    self.service = service
+  }
+
+  // MARK: Observing
+
+  public func notesSequence() -> MobileSyncAsyncSequence<[MobileSyncNote]> {
+    sequence(asyncSequence(for: service.notes)) { $0.map(MobileSyncNote.init) }
+  }
+
+  /// The default collection first, then user collections, each with its bookmarks, after every change.
+  public func collectionsWithBookmarksSequence()
+    -> MobileSyncAsyncSequence<[MobileSyncCollectionWithBookmarks]>
+  {
+    sequence(asyncSequence(for: service.collectionsWithBookmarks)) {
+      $0.map(MobileSyncCollectionWithBookmarks.init)
+    }
+  }
+
+  public func highlightsSequence() -> MobileSyncAsyncSequence<[MobileSyncAyahHighlight]> {
+    sequence(asyncSequence(for: service.highlights)) { $0.compactMap(MobileSyncAyahHighlight.init) }
+  }
+
+  public func readingBookmarksSequence() -> MobileSyncAsyncSequence<[MobileSyncReadingBookmark]> {
+    sequence(asyncSequence(for: service.readingBookmarks)) { $0.compactMap(MobileSyncReadingBookmark.init) }
+  }
+
+  public func readingSessionsSequence() -> MobileSyncAsyncSequence<[MobileSyncReadingSession]> {
+    sequence(asyncSequence(for: service.readingSessions)) { $0.map(MobileSyncReadingSession.init) }
+  }
+
+  // MARK: Importing
+
+  /// Merges local data and optionally records handled content so later tracked imports skip it.
+  /// `deleteExisting` preserves import history and cannot be combined with `trackHistory`.
+  public func importData(
+    _ data: MobileSyncImportData,
+    deleteExisting: Bool = false,
+    trackHistory: Bool = false
+  ) async throws -> MobileSyncImportResult {
+    let result = try await bridgingDataErrors {
+      try await asyncFunction(
+        for: service.importData(
+          data: data.kotlinData,
+          deleteExisting: deleteExisting,
+          trackHistory: trackHistory
+        )
+      )
+    }
+    return MobileSyncImportResult(result)
+  }
+
+  // MARK: Notes
+
+  public func createNote(
+    body: String,
+    startSura: Int,
+    startAyah: Int,
+    endSura: Int,
+    endAyah: Int,
+    timestamp: Date = Date()
+  ) async throws {
+    _ = try await bridgingDataErrors {
+      try await asyncFunction(
+        for: service.addNote(
+          body: body,
+          startSura: Int32(startSura),
+          startAyah: Int32(startAyah),
+          endSura: Int32(endSura),
+          endAyah: Int32(endAyah),
+          timestamp: timestamp
+        )
+      )
+    }
+  }
+
+  /// Changes a note's body. A note's verse ranges never change.
+  public func updateNote(id: String, body: String, timestamp: Date = Date()) async throws {
+    _ = try await bridgingDataErrors {
+      try await asyncFunction(for: service.updateNote(id: id, body: body, timestamp: timestamp))
+    }
+  }
+
+  /// - Returns: Whether a note was deleted.
+  @discardableResult
+  public func deleteNote(id: String) async throws -> Bool {
+    try await bridgingBool { try await asyncFunction(for: service.deleteNote(id: id)) }
+  }
+
+  // MARK: Collections
+
+  /// - Throws: ``MobileSyncReservedCollectionNameError`` when the name is reserved.
+  public func createCollection(named name: String, timestamp: Date = Date()) async throws
+    -> MobileSyncCollection
+  {
+    let collection = try await bridgingDataErrors {
+      try await asyncFunction(for: service.addCollection(name: name, timestamp: timestamp))
+    }
+    return MobileSyncCollection(collection)
+  }
+
+  /// - Throws: ``MobileSyncReadOnlyCollectionError`` when the collection can't be renamed,
+  ///   ``MobileSyncReservedCollectionNameError`` when the name is reserved,
+  ///   ``MobileSyncDuplicateCollectionNameError`` when another collection has the name, and
+  ///   `MobileSyncDataError.invalidArgument` when `id` isn't an active collection.
+  public func updateCollection(id: String, name: String, timestamp: Date = Date()) async throws
+    -> MobileSyncCollection
+  {
+    let collection = try await bridgingDataErrors {
+      try await asyncFunction(for: service.updateCollection(id: id, name: name, timestamp: timestamp))
+    }
+    return MobileSyncCollection(collection)
+  }
+
+  /// - Returns: Whether a collection was deleted.
+  /// - Throws: ``MobileSyncReadOnlyCollectionError`` when the collection can't be deleted.
+  @discardableResult
+  public func removeCollection(id: String) async throws -> Bool {
+    try await bridgingBool { try await asyncFunction(for: service.deleteCollection(id: id)) }
+  }
+
+  public func addAyahBookmarkToCollection(
+    collectionID: String,
+    sura: Int,
+    ayah: Int,
+    timestamp: Date = Date()
+  ) async throws -> MobileSyncCollectionBookmark {
+    let bookmark = try await bridgingDataErrors {
+      try await asyncFunction(
+        for: service.addAyahBookmarkToCollection(
+          collectionId: collectionID,
+          sura: Int32(sura),
+          ayah: Int32(ayah),
+          timestamp: timestamp
+        )
+      )
+    }
+    return MobileSyncCollectionBookmark(bookmark)
+  }
+
+  /// - Returns: Whether a membership was removed.
+  @discardableResult
+  public func removeAyahBookmarkFromCollection(collectionID: String, bookmarkID: String) async throws
+    -> Bool
+  {
+    try await bridgingBool {
+      try await asyncFunction(
+        for: service.removeAyahBookmarkFromCollection(collectionId: collectionID, bookmarkId: bookmarkID)
+      )
+    }
+  }
+
+  // MARK: Highlights
+
+  public func setAyahHighlight(
+    sura: Int,
+    ayah: Int,
+    color: MobileSyncHighlightColor,
+    timestamp: Date = Date()
+  ) async throws -> MobileSyncAyahHighlight {
+    let highlight = try await bridgingDataErrors {
+      try await asyncFunction(
+        for: service.setHighlight(
+          sura: Int32(sura),
+          ayah: Int32(ayah),
+          color: color.kotlinColor,
+          timestamp: timestamp
+        )
+      )
+    }
+    return try known(MobileSyncAyahHighlight(highlight))
+  }
+
+  /// - Returns: Whether a highlight was removed.
+  @discardableResult
+  public func deleteAyahHighlight(sura: Int, ayah: Int) async throws -> Bool {
+    try await bridgingBool {
+      try await asyncFunction(for: service.deleteHighlight(sura: Int32(sura), ayah: Int32(ayah)))
+    }
+  }
+
+  // MARK: Reading bookmarks
+
+  public func setAyahReadingBookmark(
+    slot: MobileSyncReadingBookmarkSlot,
+    sura: Int,
+    ayah: Int,
+    timestamp: Date = Date()
+  ) async throws -> MobileSyncReadingBookmark {
+    try await bridgingReadingBookmark {
+      try await asyncFunction(
+        for: service.setAyahReadingBookmark(
+          slot: slot.kotlinSlot, sura: Int32(sura), ayah: Int32(ayah), timestamp: timestamp)
+      )
+    }
+  }
+
+  public func setPageReadingBookmark(
+    slot: MobileSyncReadingBookmarkSlot,
+    page: Int,
+    timestamp: Date = Date()
+  ) async throws -> MobileSyncReadingBookmark {
+    try await bridgingReadingBookmark {
+      try await asyncFunction(
+        for: service.setPageReadingBookmark(slot: slot.kotlinSlot, page: Int32(page), timestamp: timestamp)
+      )
+    }
+  }
+
+  /// Renames a slot without moving its bookmark. A `nil` name clears it.
+  public func renameReadingBookmark(
+    slot: MobileSyncReadingBookmarkSlot,
+    name: String?,
+    timestamp: Date = Date()
+  ) async throws -> MobileSyncReadingBookmark {
+    try await bridgingReadingBookmark {
+      try await asyncFunction(
+        for: service.renameReadingBookmark(slot: slot.kotlinSlot, name: name, timestamp: timestamp)
+      )
+    }
+  }
+
+  /// Removes a slot's placement and keeps its name.
+  public func clearReadingBookmark(
+    slot: MobileSyncReadingBookmarkSlot,
+    timestamp: Date = Date()
+  ) async throws -> MobileSyncReadingBookmark {
+    try await bridgingReadingBookmark {
+      try await asyncFunction(
+        for: service.clearReadingBookmark(slot: slot.kotlinSlot, timestamp: timestamp)
+      )
+    }
+  }
+
+  // MARK: Reading sessions
+
+  public func addReadingSession(sura: Int, ayah: Int, timestamp: Date = Date()) async throws
+    -> MobileSyncReadingSession
+  {
+    let session = try await bridgingDataErrors {
+      try await asyncFunction(
+        for: service.addReadingSession(sura: Int32(sura), ayah: Int32(ayah), timestamp: timestamp)
+      )
+    }
+    return MobileSyncReadingSession(session)
+  }
+
+  /// Moves a reading session. The result is authoritative: when another session is already at the
+  /// destination, the two merge under that session's ID.
+  public func updateReadingSession(id: String, sura: Int, ayah: Int, timestamp: Date = Date()) async throws
+    -> MobileSyncReadingSession
+  {
+    let session = try await bridgingDataErrors {
+      try await asyncFunction(
+        for: service.updateReadingSession(
+          id: id, sura: Int32(sura), ayah: Int32(ayah), timestamp: timestamp)
+      )
+    }
+    return MobileSyncReadingSession(session)
+  }
+
+  // MARK: Private
+
+  private func sequence<Values: AsyncSequence, Element>(
+    _ values: Values,
+    transform: @escaping @Sendable (Values.Element) -> Element
+  ) -> MobileSyncAsyncSequence<Element> {
+    MobileSyncAsyncSequence(values.map(transform), mapError: dataError(bridging:))
+  }
+
+  private func bridgingBool(_ operation: () async throws -> KotlinBoolean) async throws -> Bool {
+    try await bridgingDataErrors(operation).boolValue
+  }
+
+  private func bridgingReadingBookmark(
+    _ operation: () async throws -> any ReadingBookmark
+  ) async throws -> MobileSyncReadingBookmark {
+    try known(MobileSyncReadingBookmark(try await bridgingDataErrors(operation)))
+  }
+
+  /// Fails a write whose result holds a value this package doesn't know yet. The write was already saved.
+  private func known<Value>(_ value: Value?) throws -> Value {
+    guard let value else {
+      throw MobileSyncDataError.failed(underlying: UnknownValueError(type: String(describing: Value.self)))
+    }
+    return value
+  }
+}
+
+/// A Kotlin result that holds a value this package doesn't know yet.
+struct UnknownValueError: Error {
+  let type: String
+}

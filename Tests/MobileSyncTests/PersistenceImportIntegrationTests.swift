@@ -7,26 +7,26 @@ final class PersistenceImportIntegrationTests: XCTestCase {
 
   override func setUp() async throws {
     try await super.setUp()
-    try await database.service.logout(clearLocalData: true)
+    try await database.reset()
   }
 
   override func tearDown() async throws {
-    try await database.service.logout(clearLocalData: true)
+    try await database.reset()
     try await super.tearDown()
   }
 
   func testOpenDatabaseReusesTheGraphDatabase() throws {
     // setUp already opened the database through the graph.
-    try SharedDependencyGraph.shared.openDatabase(using: DriverFactory())
-    try SharedDependencyGraph.shared.openDatabase(using: DriverFactory())
+    try MobileSyncGraph.openDatabase(databaseName: database.databaseName)
+    try MobileSyncGraph.openDatabase(databaseName: database.databaseName)
   }
 
   func testDefaultImportDoesNotRecordHistory() async throws {
     let data = noteData()
 
-    let inserted = try await database.service.importData(data: data)
-    let matched = try await database.service.importData(data: data, trackHistory: true)
-    let replay = try await database.service.importData(data: data, trackHistory: true)
+    let inserted = try await database.service.importData(data)
+    let matched = try await database.service.importData(data, trackHistory: true)
+    let replay = try await database.service.importData(data, trackHistory: true)
 
     XCTAssertEqual(inserted.notesImported, 1)
     XCTAssertTrue(inserted.changed)
@@ -43,12 +43,12 @@ final class PersistenceImportIntegrationTests: XCTestCase {
   func testTrackedImportDoesNotRestoreDeletedNote() async throws {
     // A logout keeps the import history, so a body other tests track would already be processed.
     let data = noteData(body: "Deleted legacy note")
-    _ = try await database.service.importData(data: data, trackHistory: true)
+    _ = try await database.service.importData(data, trackHistory: true)
     let notes = try await storedNotes()
     let note = try XCTUnwrap(notes.first)
     try await database.service.deleteNote(id: note.id)
 
-    let result = try await database.service.importData(data: data, trackHistory: true)
+    let result = try await database.service.importData(data, trackHistory: true)
 
     XCTAssertEqual(result.alreadyProcessed, 1)
     XCTAssertFalse(result.changed)
@@ -57,7 +57,7 @@ final class PersistenceImportIntegrationTests: XCTestCase {
   }
 
   func testDeleteNoteReportsWhetherANoteWasDeleted() async throws {
-    _ = try await database.service.importData(data: noteData())
+    _ = try await database.service.importData(noteData())
     let notes = try await storedNotes()
     let note = try XCTUnwrap(notes.first)
 
@@ -71,29 +71,26 @@ final class PersistenceImportIntegrationTests: XCTestCase {
   func testRemoveAyahBookmarkFromCollectionByIDsReportsWhetherAMembershipWasRemoved() async throws {
     let collection = try await database.service.createCollection(named: "Study")
     let bookmark = try await database.service.addAyahBookmarkToCollection(
-      collectionId: collection.id, sura: 2, ayah: 255, timestamp: date(100))
+      collectionID: collection.id, sura: 2, ayah: 255, timestamp: date(100))
 
     let removed = try await database.service.removeAyahBookmarkFromCollection(
-      collectionId: collection.id, bookmarkId: bookmark.bookmarkId)
+      collectionID: collection.id, bookmarkID: bookmark.bookmarkID)
     let removedAgain = try await database.service.removeAyahBookmarkFromCollection(
-      collectionId: collection.id, bookmarkId: bookmark.bookmarkId)
+      collectionID: collection.id, bookmarkID: bookmark.bookmarkID)
 
     XCTAssertTrue(removed)
     XCTAssertFalse(removedAgain)
   }
 
   func testReplacementCannotTrackHistoryAndPreservesDataOnFailure() async throws {
-    _ = try await database.service.importData(data: noteData())
+    _ = try await database.service.importData(noteData())
 
     do {
       _ = try await database.service.importData(
-        data: PersistenceImportData(
-          collections: [], collectionBookmarks: [], readingSessions: [], notes: [],
-          highlights: [], readingBookmarks: []),
-        deleteExisting: true, trackHistory: true)
+        MobileSyncImportData(), deleteExisting: true, trackHistory: true)
       XCTFail("Expected incompatible import options to throw")
-    } catch {
-      XCTAssertTrue(error.localizedDescription.contains("deleteExisting and trackHistory"))
+    } catch let MobileSyncDataError.invalidArgument(underlying) {
+      XCTAssertTrue(underlying.localizedDescription.contains("deleteExisting and trackHistory"))
     }
 
     let notes = try await storedNotes()
@@ -102,22 +99,20 @@ final class PersistenceImportIntegrationTests: XCTestCase {
 
   func testReadingBookmarkImportUsesCurrentSlotsAndSkipsTrackedReplay() async throws {
     let timestamp = Date(timeIntervalSince1970: 123)
-    let bookmark = ImportReadingBookmark.Page(
-      page: 42, lastUpdated: timestamp, slot: .teal, name: "Morning")
-    let data = PersistenceImportData(
-      collections: [], collectionBookmarks: [], readingSessions: [], notes: [],
-      highlights: [], readingBookmarks: [bookmark])
+    let bookmark = MobileSyncImportReadingBookmark(
+      slot: .teal, placement: .page(42), lastUpdated: timestamp, name: "Morning")
+    let data = MobileSyncImportData(readingBookmarks: [bookmark])
 
-    let inserted = try await database.service.importData(data: data, trackHistory: true)
-    let replay = try await database.service.importData(data: data, trackHistory: true)
+    let inserted = try await database.service.importData(data, trackHistory: true)
+    let replay = try await database.service.importData(data, trackHistory: true)
 
     XCTAssertEqual(inserted.readingBookmarksImported, 1)
     XCTAssertEqual(replay.alreadyProcessed, 1)
     XCTAssertFalse(replay.changed)
     let iterator = database.service.readingBookmarksSequence().makeAsyncIterator()
     let bookmarks = try await iterator.next()
-    let stored = try XCTUnwrap(bookmarks?.first { $0.slot == .teal } as? PageReadingBookmark)
-    XCTAssertEqual(stored.page, 42)
+    let stored = try XCTUnwrap(bookmarks?.first { $0.slot == .teal })
+    XCTAssertEqual(stored.placement, .page(42, mushafID: MobileSyncReadingBookmark.madaniMushafID))
     XCTAssertEqual(stored.name, "Morning")
     XCTAssertEqual(stored.lastUpdated, timestamp)
   }
@@ -125,19 +120,19 @@ final class PersistenceImportIntegrationTests: XCTestCase {
   func testMembershipsShareParentAndBridgeDates() async throws {
     let data = importData(
       collections: [
-        ImportCollection(name: " favorites ", lastUpdated: date(200), createdAt: date(40)),
-        ImportCollection(name: "Study", lastUpdated: date(300), createdAt: date(60)),
+        MobileSyncImportCollection(name: " favorites ", lastUpdated: date(200), createdAt: date(40)),
+        MobileSyncImportCollection(name: "Study", lastUpdated: date(300), createdAt: date(60)),
       ],
       collectionBookmarks: [
-        ImportCollectionAyahBookmark(
+        MobileSyncImportCollectionBookmark(
           collectionName: "FAVORITES", sura: 2, ayah: 255, lastUpdated: date(200), createdAt: date(50)),
-        ImportCollectionAyahBookmark(
+        MobileSyncImportCollectionBookmark(
           collectionName: "Study", sura: 2, ayah: 255, lastUpdated: date(300), createdAt: date(75)),
       ]
     )
 
-    let inserted = try await database.service.importData(data: data, trackHistory: true)
-    let replay = try await database.service.importData(data: data, trackHistory: true)
+    let inserted = try await database.service.importData(data, trackHistory: true)
+    let replay = try await database.service.importData(data, trackHistory: true)
 
     XCTAssertEqual(inserted.bookmarksImported, 1)
     XCTAssertEqual(inserted.collectionsImported, 1)
@@ -152,7 +147,7 @@ final class PersistenceImportIntegrationTests: XCTestCase {
     let studyBookmark = try XCTUnwrap(study.bookmarks.first)
     XCTAssertEqual(favorites.bookmarks.count, 1)
     XCTAssertEqual(study.bookmarks.count, 1)
-    XCTAssertEqual(favoriteBookmark.bookmarkId, studyBookmark.bookmarkId)
+    XCTAssertEqual(favoriteBookmark.bookmarkID, studyBookmark.bookmarkID)
     XCTAssertEqual(studyBookmark.sura, 2)
     XCTAssertEqual(studyBookmark.ayah, 255)
     XCTAssertEqual(studyBookmark.bookmarkAddedDate, date(50))
@@ -160,12 +155,12 @@ final class PersistenceImportIntegrationTests: XCTestCase {
 
   func testNewestHighlightWinsAndReplayIsSkipped() async throws {
     let data = importData(highlights: [
-      ImportAyahHighlight(sura: 2, ayah: 255, color: .blue, lastUpdated: date(100), createdAt: nil),
-      ImportAyahHighlight(sura: 2, ayah: 255, color: .yellow, lastUpdated: date(200), createdAt: nil),
+      MobileSyncImportHighlight(sura: 2, ayah: 255, color: .blue, lastUpdated: date(100), createdAt: nil),
+      MobileSyncImportHighlight(sura: 2, ayah: 255, color: .yellow, lastUpdated: date(200), createdAt: nil),
     ])
 
-    let inserted = try await database.service.importData(data: data, trackHistory: true)
-    let replay = try await database.service.importData(data: data, trackHistory: true)
+    let inserted = try await database.service.importData(data, trackHistory: true)
+    let replay = try await database.service.importData(data, trackHistory: true)
 
     XCTAssertEqual(inserted.highlightsImported, 1)
     XCTAssertEqual(inserted.keptExisting, 1)
@@ -178,11 +173,11 @@ final class PersistenceImportIntegrationTests: XCTestCase {
 
   func testReadingSessionImportBridgesDatesAndSkipsReplay() async throws {
     let data = importData(readingSessions: [
-      ImportReadingSession(sura: 2, ayah: 255, lastUpdated: date(200), createdAt: date(100))
+      MobileSyncImportReadingSession(sura: 2, ayah: 255, lastUpdated: date(200), createdAt: date(100))
     ])
 
-    let inserted = try await database.service.importData(data: data, trackHistory: true)
-    let replay = try await database.service.importData(data: data, trackHistory: true)
+    let inserted = try await database.service.importData(data, trackHistory: true)
+    let replay = try await database.service.importData(data, trackHistory: true)
 
     XCTAssertEqual(inserted.readingSessionsImported, 1)
     XCTAssertEqual(replay.alreadyProcessed, 1)
@@ -205,7 +200,7 @@ final class PersistenceImportIntegrationTests: XCTestCase {
 
     let notes = try await storedNotes()
     XCTAssertTrue(notes.isEmpty)
-    let retry = try await database.service.importData(data: cancelledNoteData(), trackHistory: true)
+    let retry = try await database.service.importData(cancelledNoteData(), trackHistory: true)
     XCTAssertEqual(retry.alreadyProcessed, 0)
     XCTAssertEqual(retry.notesImported, 1)
   }
@@ -213,74 +208,72 @@ final class PersistenceImportIntegrationTests: XCTestCase {
   func testInvalidReferenceThrowsBoundedErrorWithoutWriting() async throws {
     let data = importData(
       collectionBookmarks: [
-        ImportCollectionAyahBookmark(
+        MobileSyncImportCollectionBookmark(
           collectionName: "Missing", sura: 2, ayah: 255, lastUpdated: date(100), createdAt: nil)
       ],
       notes: [
-        ImportNote(
+        MobileSyncImportNote(
           body: "Private note text", startSura: 2, startAyah: 1, endSura: 2, endAyah: 1,
           lastUpdated: date(100), createdAt: nil)
       ]
     )
 
     do {
-      _ = try await database.service.importData(data: data, trackHistory: true)
+      _ = try await database.service.importData(data, trackHistory: true)
       XCTFail("Expected an unknown collection reference to throw")
-    } catch {
-      XCTAssertTrue(error.localizedDescription.contains("unknown collection"))
-      XCTAssertFalse(error.localizedDescription.contains("Private note text"))
+    } catch let MobileSyncDataError.invalidArgument(underlying) {
+      XCTAssertTrue(underlying.localizedDescription.contains("unknown collection"))
+      XCTAssertFalse(underlying.localizedDescription.contains("Private note text"))
     }
 
     let notes = try await storedNotes()
     XCTAssertTrue(notes.isEmpty)
   }
 
-  private func noteData(body: String = "Legacy note") -> PersistenceImportData {
-    PersistenceImportData(
-      collections: [], collectionBookmarks: [], readingSessions: [],
+  private func noteData(body: String = "Legacy note") -> MobileSyncImportData {
+    MobileSyncImportData(
       notes: [
-        ImportNote(
+        MobileSyncImportNote(
           body: body, startSura: 2, startAyah: 1, endSura: 2, endAyah: 3,
           lastUpdated: Date(timeIntervalSince1970: 100),
           createdAt: Date(timeIntervalSince1970: 50)
         )
-      ],
-      highlights: [], readingBookmarks: []
+      ]
     )
   }
 
   private func importData(
-    collections: [ImportCollection] = [],
-    collectionBookmarks: [ImportCollectionAyahBookmark] = [],
-    readingSessions: [ImportReadingSession] = [],
-    notes: [ImportNote] = [],
-    highlights: [ImportAyahHighlight] = []
-  ) -> PersistenceImportData {
-    PersistenceImportData(
+    collections: [MobileSyncImportCollection] = [],
+    collectionBookmarks: [MobileSyncImportCollectionBookmark] = [],
+    readingSessions: [MobileSyncImportReadingSession] = [],
+    notes: [MobileSyncImportNote] = [],
+    highlights: [MobileSyncImportHighlight] = []
+  ) -> MobileSyncImportData {
+    MobileSyncImportData(
       collections: collections, collectionBookmarks: collectionBookmarks,
-      readingSessions: readingSessions, notes: notes, highlights: highlights, readingBookmarks: [])
+      readingSessions: readingSessions, notes: notes, highlights: highlights)
   }
 
   private func date(_ seconds: TimeInterval) -> Date {
     Date(timeIntervalSince1970: seconds)
   }
 
-  private func storedNotes() async throws -> [Note] {
+  private func storedNotes() async throws -> [MobileSyncNote] {
     let iterator = database.service.notesSequence().makeAsyncIterator()
     return try await iterator.next() ?? []
   }
 
-  private func storedCollections() async throws -> [CollectionWithAyahBookmarks] {
+  private func storedCollections() async throws -> [MobileSyncCollectionWithBookmarks] {
     let iterator = database.service.collectionsWithBookmarksSequence().makeAsyncIterator()
     return try await iterator.next() ?? []
   }
 
-  private func storedHighlights() async throws -> [AyahHighlight] {
+  private func storedHighlights() async throws -> [MobileSyncAyahHighlight] {
     let iterator = database.service.highlightsSequence().makeAsyncIterator()
     return try await iterator.next() ?? []
   }
 
-  private func storedReadingSessions() async throws -> [ReadingSession] {
+  private func storedReadingSessions() async throws -> [MobileSyncReadingSession] {
     let iterator = database.service.readingSessionsSequence().makeAsyncIterator()
     return try await iterator.next() ?? []
   }
@@ -289,16 +282,14 @@ final class PersistenceImportIntegrationTests: XCTestCase {
 private func importNoteAfterCancellation() async throws {
   // The stream never yields and ends on cancellation, so the import starts in a cancelled task.
   for await _ in AsyncStream(Void.self, { _ in }) {}
-  _ = try await ImportTestDatabase.shared.service.importData(data: cancelledNoteData(), trackHistory: true)
+  _ = try await ImportTestDatabase.shared.service.importData(cancelledNoteData(), trackHistory: true)
 }
 
-private func cancelledNoteData() -> PersistenceImportData {
-  PersistenceImportData(
-    collections: [], collectionBookmarks: [], readingSessions: [],
+private func cancelledNoteData() -> MobileSyncImportData {
+  MobileSyncImportData(
     notes: [
-      ImportNote(
+      MobileSyncImportNote(
         body: "Cancelled note", startSura: 2, startAyah: 1, endSura: 2, endAyah: 1,
         lastUpdated: Date(timeIntervalSince1970: 100), createdAt: nil)
-    ],
-    highlights: [], readingBookmarks: [])
+    ])
 }

@@ -1,5 +1,5 @@
 import Foundation
-import Shared
+internal import Shared
 
 /// A note body or collection name outside the server's length limits.
 public struct MobileSyncTextLengthLimitError: Error, Equatable, Sendable {
