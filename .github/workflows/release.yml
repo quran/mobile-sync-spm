@@ -70,7 +70,7 @@ jobs:
           PY
 
       - name: Build package
-        run: xcodebuild -scheme MobileSync -destination 'generic/platform=iOS Simulator'
+        run: xcodebuild -scheme MobileSync-Package -destination 'generic/platform=iOS Simulator'
 
       - name: Commit release
         env:
