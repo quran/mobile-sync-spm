@@ -17,7 +17,7 @@ public struct MobileSyncGraph: @unchecked Sendable {
   }
 
   /// Reads and writes user data. The first access opens the database and crashes if that fails,
-  /// so call ``openDatabase(databaseName:)`` first to handle failures.
+  /// so call ``openDatabase()`` first to handle failures.
   public var dataService: MobileSyncDataService {
     MobileSyncDataService(graph.quranDataService)
   }
@@ -30,13 +30,68 @@ public struct MobileSyncGraph: @unchecked Sendable {
   /// Returns the process-wide graph, creating it on the first call. Later calls ignore their arguments.
   ///
   /// Configure ``MobileSyncLogging`` first. A blank `clientID` keeps data local and makes sign-in
-  /// unavailable. `databaseName` names the database file, `quran.db` by default, so a test process can
-  /// use a file no other process opens.
+  /// unavailable.
   public static func shared(
     environment: MobileSyncEnvironment,
     clientID: String,
+    clientSecret: String? = nil
+  ) -> MobileSyncGraph {
+    makeShared(environment: environment, clientID: clientID, clientSecret: clientSecret, databaseName: nil)
+  }
+
+  /// Like ``shared(environment:clientID:clientSecret:)``, with the database in the file `databaseName`
+  /// instead of `quran.db`, so a test process can use a file no other process opens.
+  package static func shared(
+    environment: MobileSyncEnvironment,
+    clientID: String,
     clientSecret: String? = nil,
-    databaseName: String? = nil
+    databaseName: String
+  ) -> MobileSyncGraph {
+    makeShared(
+      environment: environment, clientID: clientID, clientSecret: clientSecret, databaseName: databaseName)
+  }
+
+  /// Opens MobileSync's database, or reuses it when already open, so failures can be handled instead
+  /// of crashing when a service first needs it. A failed open is not cached, so calling again retries.
+  /// - Throws: `MobileSyncDatabaseError`. A full disk can also arrive as `openFailed`, so check free
+  ///   space if needed.
+  public static func openDatabase() throws(MobileSyncDatabaseError) {
+    try openDatabase(databaseName: nil)
+  }
+
+  /// Like ``openDatabase()``, for a graph created with a `databaseName`. The first open decides which file
+  /// the graph uses, so pass the same name.
+  package static func openDatabase(databaseName: String?) throws(MobileSyncDatabaseError) {
+    #if DEBUG
+    assertSameDatabaseName(databaseName)
+    #endif
+    do {
+      try SharedDependencyGraph.shared.openDatabase(driverFactory: driverFactory(databaseName: databaseName))
+    } catch {
+      throw MobileSyncDatabaseError(bridgedError: error)
+    }
+  }
+
+  /// Stops the graph's work, then closes the database and deletes its files.
+  ///
+  /// For a test process that uses its own `databaseName`, once it is done with MobileSync: afterwards
+  /// this graph and every service it returned stop working, and `shared` keeps returning the stopped
+  /// graph. MobileSync finishes stopping the work on the main queue, so a caller that blocks the main
+  /// thread while waiting must keep its run loop turning.
+  /// - Throws: `CancellationError` when MobileSync cancels the work, and ``MobileSyncDataError`` otherwise.
+  package func deleteDatabase() async throws {
+    do {
+      try await SharedDependencyGraph.shared.deleteDatabase()
+    } catch {
+      throw dataError(bridging: error)
+    }
+  }
+
+  private static func makeShared(
+    environment: MobileSyncEnvironment,
+    clientID: String,
+    clientSecret: String?,
+    databaseName: String?
   ) -> MobileSyncGraph {
     #if DEBUG
     assertSameSetup(
@@ -54,40 +109,6 @@ public struct MobileSyncGraph: @unchecked Sendable {
       clientSecret: clientSecret
     )
     return MobileSyncGraph(graph)
-  }
-
-  /// Opens MobileSync's database, or reuses it when already open, so failures can be handled instead
-  /// of crashing when a service first needs it. A failed open is not cached, so calling again retries.
-  ///
-  /// The first open decides which file the graph uses, so pass the `databaseName` given to
-  /// ``shared(environment:clientID:clientSecret:databaseName:)``.
-  /// - Throws: `MobileSyncDatabaseError`. A full disk can also arrive as `openFailed`, so check free
-  ///   space if needed.
-  public static func openDatabase(databaseName: String? = nil) throws(MobileSyncDatabaseError) {
-    #if DEBUG
-    assertSameDatabaseName(databaseName)
-    #endif
-    do {
-      try SharedDependencyGraph.shared.openDatabase(driverFactory: driverFactory(databaseName: databaseName))
-    } catch {
-      throw MobileSyncDatabaseError(bridgedError: error)
-    }
-  }
-
-  /// Stops the graph's work, then closes the database and deletes its files.
-  ///
-  /// For a test process that uses its own `databaseName`, once it is done with MobileSync: afterwards
-  /// this graph and every service it returned stop working, and
-  /// ``shared(environment:clientID:clientSecret:databaseName:)`` keeps returning the stopped graph.
-  /// MobileSync finishes stopping the work on the main queue, so a caller that blocks the main thread
-  /// while waiting must keep its run loop turning.
-  /// - Throws: `CancellationError` when MobileSync cancels the work, and ``MobileSyncDataError`` otherwise.
-  public func deleteDatabase() async throws {
-    do {
-      try await SharedDependencyGraph.shared.deleteDatabase()
-    } catch {
-      throw dataError(bridging: error)
-    }
   }
 
   private static func driverFactory(databaseName: String?) -> DriverFactory {
