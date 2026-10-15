@@ -41,6 +41,19 @@ final class MobileSyncTextLengthLimitErrorTests: XCTestCase {
       MobileSyncTextLengthLimitError(field: .collectionName, bound: .tooLong, limit: 255, length: 300))
   }
 
+  func testMapsEveryKotlinFieldAndBound() throws {
+    for field in TextLengthField.entries {
+      for bound in TextLengthBound.entries {
+        let error = bridgedError(TextLengthLimitException(field: field, bound: bound, limit: 1, length: 2))
+
+        let mapped = try XCTUnwrap(
+          MobileSyncTextLengthLimitError(bridgedError: error), "\(field.name) \(bound.name) is not mapped")
+        XCTAssertEqual("\(mapped.field)".lowercased(), field.name.replacingOccurrences(of: "_", with: "").lowercased())
+        XCTAssertEqual("\(mapped.bound)".lowercased(), bound.name.replacingOccurrences(of: "_", with: "").lowercased())
+      }
+    }
+  }
+
   func testIgnoresOtherKotlinExceptions() {
     let error = bridgedError(KotlinIllegalArgumentException(message: "Note body is invalid"))
 

@@ -64,5 +64,12 @@ let package = Package(
         .target(name: shimTargetName)
       ]
     ),
+    // Deleting the database stops the process-wide graph, so this runs in its own test process.
+    .testTarget(
+      name: "MobileSyncDeleteDatabaseTests",
+      dependencies: [
+        .target(name: shimTargetName)
+      ]
+    ),
   ]
 )
