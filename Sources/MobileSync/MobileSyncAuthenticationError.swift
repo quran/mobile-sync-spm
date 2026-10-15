@@ -1,5 +1,5 @@
 import Foundation
-import Shared
+internal import Shared
 
 /// Swift-native authentication failures produced by MobileSync.
 public enum MobileSyncAuthenticationError: Error {

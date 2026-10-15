@@ -1,5 +1,5 @@
 import Foundation
-import Shared
+internal import Shared
 
 /// Swift-native failures opening MobileSync's database.
 ///

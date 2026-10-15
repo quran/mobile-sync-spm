@@ -1,65 +1,53 @@
 import Foundation
+import MobileSync
 import XCTest
-
-@testable import MobileSync
 
 final class TextLengthLimitIntegrationTests: XCTestCase {
   private let database = ImportTestDatabase.shared
 
   override func setUp() async throws {
     try await super.setUp()
-    try await database.service.logout(clearLocalData: true)
+    try await database.reset()
   }
 
   override func tearDown() async throws {
-    try await database.service.logout(clearLocalData: true)
+    try await database.reset()
     try await super.tearDown()
   }
 
   func testCreateNoteThrowsTextLengthLimitError() async throws {
-    let expected = MobileSyncTextLengthLimitError(
+    let expected = ExpectedLimit(
       field: .noteBody, bound: .tooShort, limit: 6, length: 2)
 
-    await assertThrows(expected) {
+    await assertThrows(\MobileSyncTextLengthLimitError.fields, expected) {
       try await self.database.service.createNote(
         body: "Hi", startSura: 2, startAyah: 1, endSura: 2, endAyah: 1)
-    }
-    await assertThrows(expected) {
-      try await self.database.service.createNote(
-        body: "Hi", startSura: 2, startAyah: 1, endSura: 2, endAyah: 1, timestamp: self.date(100))
     }
     let notes = try await storedNotes()
     XCTAssertTrue(notes.isEmpty)
   }
 
   func testUpdateNoteThrowsTextLengthLimitErrorAndKeepsBody() async throws {
-    _ = try await database.service.importData(data: noteData())
+    _ = try await database.service.importData(noteData())
     let notes = try await storedNotes()
     let note = try XCTUnwrap(notes.first)
     let body = String(repeating: "a", count: 10001)
-    let expected = MobileSyncTextLengthLimitError(
+    let expected = ExpectedLimit(
       field: .noteBody, bound: .tooLong, limit: 10000, length: 10001)
 
-    await assertThrows(expected) {
+    await assertThrows(\MobileSyncTextLengthLimitError.fields, expected) {
       try await self.database.service.updateNote(id: note.id, body: body)
-    }
-    await assertThrows(expected) {
-      try await self.database.service.updateNote(
-        id: note.id, body: body, timestamp: self.date(200))
     }
     let storedBodies = try await storedNotes().map(\.body)
     XCTAssertEqual(storedBodies, ["Legacy note"])
   }
 
   func testCreateCollectionThrowsTextLengthLimitError() async throws {
-    let expected = MobileSyncTextLengthLimitError(
+    let expected = ExpectedLimit(
       field: .collectionName, bound: .tooShort, limit: 1, length: 0)
 
-    await assertThrows(expected) {
+    await assertThrows(\MobileSyncTextLengthLimitError.fields, expected) {
       _ = try await self.database.service.createCollection(named: "  ")
-    }
-    await assertThrows(expected) {
-      _ = try await self.database.service.createCollection(named: "  ", timestamp: self.date(100))
     }
     let collections = try await storedCollections()
     XCTAssertFalse(collections.contains { !$0.collection.isSystem })
@@ -68,53 +56,47 @@ final class TextLengthLimitIntegrationTests: XCTestCase {
   func testUpdateCollectionThrowsTextLengthLimitErrorAndKeepsName() async throws {
     let collection = try await database.service.createCollection(named: "Study")
     let name = String(repeating: "a", count: 256)
-    let expected = MobileSyncTextLengthLimitError(
+    let expected = ExpectedLimit(
       field: .collectionName, bound: .tooLong, limit: 255, length: 256)
 
-    await assertThrows(expected) {
+    await assertThrows(\MobileSyncTextLengthLimitError.fields, expected) {
       _ = try await self.database.service.updateCollection(id: collection.id, name: name)
-    }
-    await assertThrows(expected) {
-      _ = try await self.database.service.updateCollection(
-        id: collection.id, name: name, timestamp: self.date(200))
     }
     let collections = try await storedCollections()
     XCTAssertEqual(collections.first { $0.collection.id == collection.id }?.collection.name, "Study")
   }
 
-  func testUpdateCollectionPassesOtherErrorsThrough() async throws {
+  func testUpdateCollectionThrowsDataErrorForOtherFailures() async throws {
     do {
       _ = try await database.service.updateCollection(id: "999999", name: "Study")
       XCTFail("Expected a missing collection to throw")
-    } catch {
-      XCTAssertFalse(error is MobileSyncTextLengthLimitError)
-      XCTAssertTrue(error.localizedDescription.contains("Expected active collection"))
+    } catch let MobileSyncDataError.invalidArgument(underlying) {
+      XCTAssertTrue(underlying.localizedDescription.contains("Expected active collection"))
     }
   }
 
-  private func assertThrows(
-    _ expected: MobileSyncTextLengthLimitError,
+  private func assertThrows<E: Error, Value: Equatable>(
+    _ field: KeyPath<E, Value>,
+    _ expected: Value,
     file: StaticString = #filePath,
     line: UInt = #line,
     _ operation: () async throws -> Void
   ) async {
     do {
       try await operation()
-      XCTFail("Expected a text length limit error", file: file, line: line)
+      XCTFail("Expected \(E.self)", file: file, line: line)
     } catch {
-      XCTAssertEqual(error as? MobileSyncTextLengthLimitError, expected, file: file, line: line)
+      XCTAssertEqual((error as? E)?[keyPath: field], expected, file: file, line: line)
     }
   }
 
-  private func noteData() -> PersistenceImportData {
-    PersistenceImportData(
-      collections: [], collectionBookmarks: [], readingSessions: [],
+  private func noteData() -> MobileSyncImportData {
+    MobileSyncImportData(
       notes: [
-        ImportNote(
+        MobileSyncImportNote(
           body: "Legacy note", startSura: 2, startAyah: 1, endSura: 2, endAyah: 3,
           lastUpdated: date(100), createdAt: date(50))
-      ],
-      highlights: [], readingBookmarks: []
+      ]
     )
   }
 
@@ -122,13 +104,27 @@ final class TextLengthLimitIntegrationTests: XCTestCase {
     Date(timeIntervalSince1970: seconds)
   }
 
-  private func storedNotes() async throws -> [Note] {
+  private func storedNotes() async throws -> [MobileSyncNote] {
     let iterator = database.service.notesSequence().makeAsyncIterator()
     return try await iterator.next() ?? []
   }
 
-  private func storedCollections() async throws -> [CollectionWithAyahBookmarks] {
+  private func storedCollections() async throws -> [MobileSyncCollectionWithBookmarks] {
     let iterator = database.service.collectionsWithBookmarksSequence().makeAsyncIterator()
     return try await iterator.next() ?? []
+  }
+}
+
+/// The public fields of a `MobileSyncTextLengthLimitError`, whose initializer is internal.
+private struct ExpectedLimit: Equatable {
+  let field: MobileSyncTextLengthLimitError.Field
+  let bound: MobileSyncTextLengthLimitError.Bound
+  let limit: Int
+  let length: Int
+}
+
+extension MobileSyncTextLengthLimitError {
+  fileprivate var fields: ExpectedLimit {
+    ExpectedLimit(field: field, bound: bound, limit: limit, length: length)
   }
 }

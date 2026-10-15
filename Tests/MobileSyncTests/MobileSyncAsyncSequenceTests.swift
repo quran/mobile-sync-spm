@@ -18,4 +18,20 @@ final class MobileSyncAsyncSequenceTests: XCTestCase {
     XCTAssertEqual(second, 2)
     XCTAssertNil(end)
   }
+
+  func testMapsErrorsFromWrappedSequence() async {
+    struct Source: Error {}
+    struct Mapped: Error {}
+    let source = AsyncThrowingStream<Int, Error> { continuation in
+      continuation.finish(throwing: Source())
+    }
+    let iterator = MobileSyncAsyncSequence(source, mapError: { _ in Mapped() }).makeAsyncIterator()
+
+    do {
+      _ = try await iterator.next()
+      XCTFail("Expected the source error")
+    } catch {
+      XCTAssertTrue(error is Mapped)
+    }
+  }
 }
