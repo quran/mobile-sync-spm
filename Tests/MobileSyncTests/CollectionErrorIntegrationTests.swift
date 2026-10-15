@@ -1,9 +1,10 @@
 import Foundation
 import MobileSync
+import MobileSyncTestSupport
 import XCTest
 
 final class CollectionErrorIntegrationTests: XCTestCase {
-  private let database = ImportTestDatabase.shared
+  private let database = MobileSyncTestDatabase.shared
 
   override func setUp() async throws {
     try await super.setUp()
@@ -16,11 +17,11 @@ final class CollectionErrorIntegrationTests: XCTestCase {
   }
 
   func testUpdateCollectionThrowsDuplicateNameErrorAndKeepsName() async throws {
-    _ = try await database.service.createCollection(named: "Study")
-    let collection = try await database.service.createCollection(named: "Review")
+    _ = try await database.quranDataService.createCollection(named: "Study")
+    let collection = try await database.quranDataService.createCollection(named: "Review")
 
     await assertThrows(\MobileSyncDuplicateCollectionNameError.name, "Study") {
-      _ = try await self.database.service.updateCollection(id: collection.id, name: " study ")
+      _ = try await self.database.quranDataService.updateCollection(id: collection.id, name: " study ")
     }
     let collections = try await storedCollections()
     XCTAssertEqual(collections.first { $0.collection.id == collection.id }?.collection.name, "Review")
@@ -33,23 +34,23 @@ final class CollectionErrorIntegrationTests: XCTestCase {
     XCTAssertTrue(favorites.collection.isReadOnly)
 
     await assertThrows(\MobileSyncReadOnlyCollectionError.id, id) {
-      _ = try await self.database.service.updateCollection(id: id, name: "Renamed")
+      _ = try await self.database.quranDataService.updateCollection(id: id, name: "Renamed")
     }
     await assertThrows(\MobileSyncReadOnlyCollectionError.id, id) {
-      _ = try await self.database.service.removeCollection(id: id)
+      _ = try await self.database.quranDataService.removeCollection(id: id)
     }
     let storedNames = try await storedCollections().map(\.collection.name)
     XCTAssertTrue(storedNames.contains(favorites.collection.name))
   }
 
   func testCreateAndRenameThrowReservedNameError() async throws {
-    let collection = try await database.service.createCollection(named: "Study")
+    let collection = try await database.quranDataService.createCollection(named: "Study")
 
     await assertThrows(\MobileSyncReservedCollectionNameError.name, "system:notes") {
-      _ = try await self.database.service.createCollection(named: "system:notes")
+      _ = try await self.database.quranDataService.createCollection(named: "system:notes")
     }
     await assertThrows(\MobileSyncReservedCollectionNameError.name, "Favorites") {
-      _ = try await self.database.service.updateCollection(id: collection.id, name: "Favorites")
+      _ = try await self.database.quranDataService.updateCollection(id: collection.id, name: "Favorites")
     }
     let names = try await storedCollections().map(\.collection.name)
     XCTAssertTrue(names.contains("Study"))
@@ -72,7 +73,7 @@ final class CollectionErrorIntegrationTests: XCTestCase {
   }
 
   private func storedCollections() async throws -> [MobileSyncCollectionWithBookmarks] {
-    let iterator = database.service.collectionsWithBookmarksSequence().makeAsyncIterator()
+    let iterator = database.quranDataService.collectionsWithBookmarksSequence().makeAsyncIterator()
     return try await iterator.next() ?? []
   }
 }

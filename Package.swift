@@ -6,6 +6,7 @@ let packageName = "MobileSync"
 let binaryTargetName = "Shared"
 let shimTargetName = "MobileSync"
 let shimProductName = "MobileSync"
+let testSupportTargetName = "MobileSyncTestSupport"
 
 let localBinaryPath = ProcessInfo.processInfo.environment["MOBILE_SYNC_XCFRAMEWORK_PATH"]?
   .trimmingCharacters(in: .whitespacesAndNewlines)
@@ -38,6 +39,11 @@ let package = Package(
       name: shimProductName,
       targets: [shimTargetName]
     ),
+    // Only test targets may link it: it imports XCTest.
+    .library(
+      name: testSupportTargetName,
+      targets: [testSupportTargetName]
+    ),
   ],
   dependencies: [
     .package(
@@ -58,10 +64,18 @@ let package = Package(
         .linkedLibrary("sqlite3")
       ]
     ),
+    .target(
+      name: testSupportTargetName,
+      dependencies: [
+        .target(name: shimTargetName)
+      ],
+      path: "Sources/\(testSupportTargetName)"
+    ),
     .testTarget(
       name: "MobileSyncTests",
       dependencies: [
-        .target(name: shimTargetName)
+        .target(name: shimTargetName),
+        .target(name: testSupportTargetName),
       ]
     ),
     // Deleting the database stops the process-wide graph, so this runs in its own test process.

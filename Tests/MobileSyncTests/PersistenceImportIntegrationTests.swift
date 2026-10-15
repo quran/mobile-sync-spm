@@ -1,9 +1,10 @@
 import Foundation
 import MobileSync
+import MobileSyncTestSupport
 import XCTest
 
 final class PersistenceImportIntegrationTests: XCTestCase {
-  private let database = ImportTestDatabase.shared
+  private let database = MobileSyncTestDatabase.shared
 
   override func setUp() async throws {
     try await super.setUp()
@@ -24,9 +25,9 @@ final class PersistenceImportIntegrationTests: XCTestCase {
   func testDefaultImportDoesNotRecordHistory() async throws {
     let data = noteData()
 
-    let inserted = try await database.service.importData(data)
-    let matched = try await database.service.importData(data, trackHistory: true)
-    let replay = try await database.service.importData(data, trackHistory: true)
+    let inserted = try await database.quranDataService.importData(data)
+    let matched = try await database.quranDataService.importData(data, trackHistory: true)
+    let replay = try await database.quranDataService.importData(data, trackHistory: true)
 
     XCTAssertEqual(inserted.notesImported, 1)
     XCTAssertTrue(inserted.changed)
@@ -43,12 +44,12 @@ final class PersistenceImportIntegrationTests: XCTestCase {
   func testTrackedImportDoesNotRestoreDeletedNote() async throws {
     // A logout keeps the import history, so a body other tests track would already be processed.
     let data = noteData(body: "Deleted legacy note")
-    _ = try await database.service.importData(data, trackHistory: true)
+    _ = try await database.quranDataService.importData(data, trackHistory: true)
     let notes = try await storedNotes()
     let note = try XCTUnwrap(notes.first)
-    try await database.service.deleteNote(id: note.id)
+    try await database.quranDataService.deleteNote(id: note.id)
 
-    let result = try await database.service.importData(data, trackHistory: true)
+    let result = try await database.quranDataService.importData(data, trackHistory: true)
 
     XCTAssertEqual(result.alreadyProcessed, 1)
     XCTAssertFalse(result.changed)
@@ -57,25 +58,25 @@ final class PersistenceImportIntegrationTests: XCTestCase {
   }
 
   func testDeleteNoteReportsWhetherANoteWasDeleted() async throws {
-    _ = try await database.service.importData(noteData())
+    _ = try await database.quranDataService.importData(noteData())
     let notes = try await storedNotes()
     let note = try XCTUnwrap(notes.first)
 
-    let deleted = try await database.service.deleteNote(id: note.id)
-    let deletedAgain = try await database.service.deleteNote(id: note.id)
+    let deleted = try await database.quranDataService.deleteNote(id: note.id)
+    let deletedAgain = try await database.quranDataService.deleteNote(id: note.id)
 
     XCTAssertTrue(deleted)
     XCTAssertFalse(deletedAgain)
   }
 
   func testRemoveAyahBookmarkFromCollectionByIDsReportsWhetherAMembershipWasRemoved() async throws {
-    let collection = try await database.service.createCollection(named: "Study")
-    let bookmark = try await database.service.addAyahBookmarkToCollection(
+    let collection = try await database.quranDataService.createCollection(named: "Study")
+    let bookmark = try await database.quranDataService.addAyahBookmarkToCollection(
       collectionID: collection.id, sura: 2, ayah: 255, timestamp: date(100))
 
-    let removed = try await database.service.removeAyahBookmarkFromCollection(
+    let removed = try await database.quranDataService.removeAyahBookmarkFromCollection(
       collectionID: collection.id, bookmarkID: bookmark.bookmarkID)
-    let removedAgain = try await database.service.removeAyahBookmarkFromCollection(
+    let removedAgain = try await database.quranDataService.removeAyahBookmarkFromCollection(
       collectionID: collection.id, bookmarkID: bookmark.bookmarkID)
 
     XCTAssertTrue(removed)
@@ -83,10 +84,10 @@ final class PersistenceImportIntegrationTests: XCTestCase {
   }
 
   func testReplacementCannotTrackHistoryAndPreservesDataOnFailure() async throws {
-    _ = try await database.service.importData(noteData())
+    _ = try await database.quranDataService.importData(noteData())
 
     do {
-      _ = try await database.service.importData(
+      _ = try await database.quranDataService.importData(
         MobileSyncImportData(), deleteExisting: true, trackHistory: true)
       XCTFail("Expected incompatible import options to throw")
     } catch let MobileSyncDataError.invalidArgument(underlying) {
@@ -103,13 +104,13 @@ final class PersistenceImportIntegrationTests: XCTestCase {
       slot: .teal, placement: .page(42), lastUpdated: timestamp, name: "Morning")
     let data = MobileSyncImportData(readingBookmarks: [bookmark])
 
-    let inserted = try await database.service.importData(data, trackHistory: true)
-    let replay = try await database.service.importData(data, trackHistory: true)
+    let inserted = try await database.quranDataService.importData(data, trackHistory: true)
+    let replay = try await database.quranDataService.importData(data, trackHistory: true)
 
     XCTAssertEqual(inserted.readingBookmarksImported, 1)
     XCTAssertEqual(replay.alreadyProcessed, 1)
     XCTAssertFalse(replay.changed)
-    let iterator = database.service.readingBookmarksSequence().makeAsyncIterator()
+    let iterator = database.quranDataService.readingBookmarksSequence().makeAsyncIterator()
     let bookmarks = try await iterator.next()
     let stored = try XCTUnwrap(bookmarks?.first { $0.slot == .teal })
     XCTAssertEqual(stored.placement, .page(42, mushafID: MobileSyncReadingBookmark.madaniMushafID))
@@ -131,8 +132,8 @@ final class PersistenceImportIntegrationTests: XCTestCase {
       ]
     )
 
-    let inserted = try await database.service.importData(data, trackHistory: true)
-    let replay = try await database.service.importData(data, trackHistory: true)
+    let inserted = try await database.quranDataService.importData(data, trackHistory: true)
+    let replay = try await database.quranDataService.importData(data, trackHistory: true)
 
     XCTAssertEqual(inserted.bookmarksImported, 1)
     XCTAssertEqual(inserted.collectionsImported, 1)
@@ -159,8 +160,8 @@ final class PersistenceImportIntegrationTests: XCTestCase {
       MobileSyncImportHighlight(sura: 2, ayah: 255, color: .yellow, lastUpdated: date(200), createdAt: nil),
     ])
 
-    let inserted = try await database.service.importData(data, trackHistory: true)
-    let replay = try await database.service.importData(data, trackHistory: true)
+    let inserted = try await database.quranDataService.importData(data, trackHistory: true)
+    let replay = try await database.quranDataService.importData(data, trackHistory: true)
 
     XCTAssertEqual(inserted.highlightsImported, 1)
     XCTAssertEqual(inserted.keptExisting, 1)
@@ -176,8 +177,8 @@ final class PersistenceImportIntegrationTests: XCTestCase {
       MobileSyncImportReadingSession(sura: 2, ayah: 255, lastUpdated: date(200), createdAt: date(100))
     ])
 
-    let inserted = try await database.service.importData(data, trackHistory: true)
-    let replay = try await database.service.importData(data, trackHistory: true)
+    let inserted = try await database.quranDataService.importData(data, trackHistory: true)
+    let replay = try await database.quranDataService.importData(data, trackHistory: true)
 
     XCTAssertEqual(inserted.readingSessionsImported, 1)
     XCTAssertEqual(replay.alreadyProcessed, 1)
@@ -200,7 +201,7 @@ final class PersistenceImportIntegrationTests: XCTestCase {
 
     let notes = try await storedNotes()
     XCTAssertTrue(notes.isEmpty)
-    let retry = try await database.service.importData(cancelledNoteData(), trackHistory: true)
+    let retry = try await database.quranDataService.importData(cancelledNoteData(), trackHistory: true)
     XCTAssertEqual(retry.alreadyProcessed, 0)
     XCTAssertEqual(retry.notesImported, 1)
   }
@@ -219,7 +220,7 @@ final class PersistenceImportIntegrationTests: XCTestCase {
     )
 
     do {
-      _ = try await database.service.importData(data, trackHistory: true)
+      _ = try await database.quranDataService.importData(data, trackHistory: true)
       XCTFail("Expected an unknown collection reference to throw")
     } catch let MobileSyncDataError.invalidArgument(underlying) {
       XCTAssertTrue(underlying.localizedDescription.contains("unknown collection"))
@@ -259,22 +260,22 @@ final class PersistenceImportIntegrationTests: XCTestCase {
   }
 
   private func storedNotes() async throws -> [MobileSyncNote] {
-    let iterator = database.service.notesSequence().makeAsyncIterator()
+    let iterator = database.quranDataService.notesSequence().makeAsyncIterator()
     return try await iterator.next() ?? []
   }
 
   private func storedCollections() async throws -> [MobileSyncCollectionWithBookmarks] {
-    let iterator = database.service.collectionsWithBookmarksSequence().makeAsyncIterator()
+    let iterator = database.quranDataService.collectionsWithBookmarksSequence().makeAsyncIterator()
     return try await iterator.next() ?? []
   }
 
   private func storedHighlights() async throws -> [MobileSyncAyahHighlight] {
-    let iterator = database.service.highlightsSequence().makeAsyncIterator()
+    let iterator = database.quranDataService.highlightsSequence().makeAsyncIterator()
     return try await iterator.next() ?? []
   }
 
   private func storedReadingSessions() async throws -> [MobileSyncReadingSession] {
-    let iterator = database.service.readingSessionsSequence().makeAsyncIterator()
+    let iterator = database.quranDataService.readingSessionsSequence().makeAsyncIterator()
     return try await iterator.next() ?? []
   }
 }
@@ -282,7 +283,7 @@ final class PersistenceImportIntegrationTests: XCTestCase {
 private func importNoteAfterCancellation() async throws {
   // The stream never yields and ends on cancellation, so the import starts in a cancelled task.
   for await _ in AsyncStream(Void.self, { _ in }) {}
-  _ = try await ImportTestDatabase.shared.service.importData(cancelledNoteData(), trackHistory: true)
+  _ = try await MobileSyncTestDatabase.shared.quranDataService.importData(cancelledNoteData(), trackHistory: true)
 }
 
 private func cancelledNoteData() -> MobileSyncImportData {

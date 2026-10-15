@@ -4,22 +4,26 @@ import XCTest
 
 /// The real MobileSync database for tests, in a file only this process uses.
 ///
-/// Test processes on one simulator share its database directory, so the file has a unique name.
-/// MobileSync owns the services' synchronization; tests reset the database before and after each test,
-/// and it is deleted when the test bundle finishes.
-final class ImportTestDatabase: Sendable {
-  static let shared = ImportTestDatabase()
-  let databaseName = "mobile-sync-spm-tests-\(UUID().uuidString).db"
-  let graph: MobileSyncGraph
+/// Test bundles and concurrent runs on one simulator share its database directory, so the file has a
+/// unique name. It is closed and deleted when the test bundle finishes.
+public final class MobileSyncTestDatabase: Sendable {
+  public static let shared = MobileSyncTestDatabase()
 
-  var service: MobileSyncDataService {
+  public var quranDataService: MobileSyncDataService {
     graph.dataService
   }
 
-  /// Signs out, which clears every table.
-  func reset() async throws {
-    try await graph.authService.signOut()
+  public var authService: MobileSyncAuthService {
+    graph.authService
   }
+
+  /// Signs out, which clears every table.
+  public func reset() async throws {
+    try await authService.signOut()
+  }
+
+  package let databaseName = "mobile-sync-tests-\(UUID().uuidString).db"
+  private let graph: MobileSyncGraph
 
   private init() {
     graph = MobileSyncGraph.shared(environment: .prelive, clientID: "", databaseName: databaseName)
@@ -44,8 +48,8 @@ private final class DatabaseDeleter: NSObject, XCTestObservation {
   }
 
   func testBundleDidFinish(_ testBundle: Bundle) {
-    // This runs on the main thread, where MobileSync finishes stopping the graph's work, so keep the run loop
-    // turning while waiting.
+    // This runs on the main thread, where MobileSync finishes stopping the graph's work, so keep the run
+    // loop turning while waiting.
     let deletion = Deletion()
     Task { @MainActor [graph] in
       do {
