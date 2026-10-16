@@ -40,7 +40,7 @@ struct PrintLogSink: MobileSyncLogSink {
 // Configure logging before creating the graph: HTTP clients read it when they are created.
 MobileSyncLogging.configure(sink: PrintLogSink(), minSeverity: .info)
 
-// The process-wide graph. Later calls return the same graph and ignore their arguments.
+// The process-wide graph. Later calls return the same graph; in debug builds, different arguments assert.
 // A blank clientID keeps data local and makes sign-in unavailable.
 let graph = MobileSyncGraph.shared(environment: .production, clientID: "<client ID>")
 
@@ -71,11 +71,13 @@ for try await notes in data.notesSequence() {
 }
 ```
 
-`MobileSyncDataService` also covers updating and deleting each of these, page reading bookmarks, reading
-sessions, and importing local data (`importData(_:deleteExisting:trackHistory:)`). Writes take a `timestamp`
-that defaults to now. Calls throw `CancellationError`, `MobileSyncTextLengthLimitError`, the collection
-errors (`MobileSyncReadOnlyCollectionError`, `MobileSyncDuplicateCollectionNameError`,
-`MobileSyncReservedCollectionNameError`) documented on each collection write, or `MobileSyncDataError`.
+`MobileSyncDataService` also covers updating and deleting notes and collections, removing collection bookmarks
+and highlights, setting page reading bookmarks, renaming and clearing reading bookmarks, adding and updating
+reading sessions, and importing local data (`importData(_:deleteExisting:trackHistory:)`). Calls that create,
+add, set, update, rename or clear take a `timestamp` that defaults to now. Calls throw `CancellationError`,
+`MobileSyncTextLengthLimitError`, the collection errors (`MobileSyncReadOnlyCollectionError`,
+`MobileSyncDuplicateCollectionNameError`, `MobileSyncReservedCollectionNameError`) documented on each
+collection write, or `MobileSyncDataError`.
 
 Signing in, which also syncs the user's data with Quran.com:
 
@@ -109,7 +111,7 @@ final class NotesTests: XCTestCase {
 
   override func setUp() async throws {
     try await super.setUp()
-    try await database.reset() // Clears every table.
+    try await database.reset() // Clears user data; tracked import history survives.
   }
 
   func testCreatesNote() async throws {
@@ -120,8 +122,9 @@ final class NotesTests: XCTestCase {
 }
 ```
 
-`MobileSyncTestDatabase` creates the process-wide graph itself, so the test process must not call
-`MobileSyncGraph.shared` first (for example from a host app); in debug builds that trips an assertion.
+`MobileSyncTestDatabase` creates the process-wide graph with its own database file, so the test process must
+not call `MobileSyncGraph.shared` or `MobileSyncGraph.openDatabase()` itself (for example from a host app); in
+debug builds either call trips an assertion.
 
 ## Development
 
@@ -162,8 +165,10 @@ Given a mobile-sync release (`kmp_version`) and this package's next version (`pa
 `Release <package_version>` to main and tags `v<package_version>`:
 
 ```bash
-gh workflow run release.yml -R quran/mobile-sync-spm -f kmp_version=0.1.34 -f package_version=0.2.1
+gh workflow run release.yml -R quran/mobile-sync-spm -f kmp_version=<mobile-sync version> -f package_version=<next version>
 ```
+
+For example, 0.2.1 was released with `kmp_version=0.1.34` and `package_version=0.2.1`.
 
 This package's versions are its own, not mobile-sync's; `remoteVersion` in `Package.swift` names the
 mobile-sync release it ships. See [AGENTS.md](AGENTS.md) for when a release needs a PR and how versions are

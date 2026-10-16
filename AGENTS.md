@@ -69,12 +69,16 @@ MOBILE_SYNC_XCFRAMEWORK_PATH=../mobile-sync/umbrella/build/XCFrameworks/debug/Sh
 Run the Release Wrapper (`.github/workflows/release.yml`, `workflow_dispatch`) on main:
 
 ```bash
-gh workflow run release.yml -R quran/mobile-sync-spm -f kmp_version=0.1.34 -f package_version=0.2.1
+gh workflow run release.yml -R quran/mobile-sync-spm -f kmp_version=<mobile-sync version> -f package_version=<next version>
 ```
 
 - `kmp_version`: the mobile-sync release without the leading `v` (e.g. `0.1.34`).
 - `package_version`: the next version of this package (see Versioning). Always pass both inputs; the
   defaults are placeholders.
+- Check `git tag` first that `v<package_version>` doesn't exist: the workflow pushes the release commit to
+  main before it tags, so a taken version leaves a stray `Release` commit on main.
+
+For example, 0.2.1 was released with `kmp_version=0.1.34` and `package_version=0.2.1`.
 
 The workflow downloads `Shared-<kmp_version>.xcframework.zip` from the quran/mobile-sync GitHub release,
 computes its checksum, rewrites `remoteVersion` and `remoteChecksum` in `Package.swift`, builds and runs the
@@ -97,4 +101,4 @@ the mobile-sync version (e.g. this package's 0.1.34 shipped mobile-sync 0.1.33, 
 - Patch: a mobile-sync upgrade that needs no Swift API change (0.2.0 → 0.2.1 for mobile-sync 0.1.34).
 - Minor (pre-1.0): breaking Swift API changes (0.2.0 for the Swift-only API in #31).
 
-Before 0.2.0 every release was a patch bump, breaking ones (#28, #32) included.
+From 0.1.0 until 0.2.0 every release was a patch bump, breaking ones (#28, #32) included.
