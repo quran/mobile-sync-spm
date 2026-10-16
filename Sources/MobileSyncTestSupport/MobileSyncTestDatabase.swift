@@ -17,7 +17,7 @@ public final class MobileSyncTestDatabase: Sendable {
     graph.authService
   }
 
-  /// Signs out, which clears every table.
+  /// Signs out, which clears user data but keeps tracked import history.
   public func reset() async throws {
     try await authService.signOut()
   }
