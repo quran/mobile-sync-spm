@@ -29,6 +29,36 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
+      # The release commit is pushed to main before the tag, so a taken version must stop the release here.
+      - name: Check versions
+        env:
+          KMP_VERSION: ${{ inputs.kmp_version }}
+          PACKAGE_VERSION: ${{ inputs.package_version }}
+        run: |
+          semver='^[0-9]+\.[0-9]+\.[0-9]+$'
+          if [[ ! "$KMP_VERSION" =~ $semver ]]; then
+            echo "::error::kmp_version '${KMP_VERSION}' must look like 1.2.3, with no leading v."
+            exit 1
+          fi
+          if [[ ! "$PACKAGE_VERSION" =~ $semver ]]; then
+            echo "::error::package_version '${PACKAGE_VERSION}' must look like 1.2.3, with no leading v."
+            exit 1
+          fi
+
+          status=0
+          git ls-remote --exit-code --tags origin "refs/tags/v${PACKAGE_VERSION}" > /dev/null || status=$?
+          case "$status" in
+            0)
+              echo "::error::Tag v${PACKAGE_VERSION} already exists; pick the next package_version."
+              exit 1
+              ;;
+            2) ;;
+            *)
+              echo "::error::Couldn't list the remote tags (git ls-remote exited with ${status})."
+              exit 1
+              ;;
+          esac
+
       - name: Download Shared.xcframework.zip
         env:
           KMP_VERSION: ${{ inputs.kmp_version }}

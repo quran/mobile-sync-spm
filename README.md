@@ -162,7 +162,7 @@ open -a Xcode --env MOBILE_SYNC_XCFRAMEWORK_PATH=../mobile-sync/umbrella/build/X
 Releases are made by the **Release Wrapper** workflow ([`.github/workflows/release.yml`](.github/workflows/release.yml)).
 Given a mobile-sync release (`kmp_version`) and this package's next version (`package_version`), it points
 `Package.swift` at that release's XCFramework and checksum, builds and runs the tests, commits
-`Release <package_version>` to main and tags `v<package_version>`:
+`Release <package_version>` to main and tags `v<package_version>`. It refuses a version that is already tagged:
 
 ```bash
 gh workflow run release.yml -R quran/mobile-sync-spm -f kmp_version=<mobile-sync version> -f package_version=<next version>
