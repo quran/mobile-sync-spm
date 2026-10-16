@@ -74,16 +74,15 @@ gh workflow run release.yml -R quran/mobile-sync-spm -f kmp_version=<mobile-sync
 
 - `kmp_version`: the mobile-sync release without the leading `v` (e.g. `0.1.34`).
 - `package_version`: the next version of this package (see Versioning). Always pass both inputs; the
-  defaults are placeholders.
-- Check `git tag` first that `v<package_version>` doesn't exist: the workflow pushes the release commit to
-  main before it tags, so a taken version leaves a stray `Release` commit on main.
+  defaults are placeholders that are already tagged.
 
 For example, 0.2.1 was released with `kmp_version=0.1.34` and `package_version=0.2.1`.
 
-The workflow downloads `Shared-<kmp_version>.xcframework.zip` from the quran/mobile-sync GitHub release,
-computes its checksum, rewrites `remoteVersion` and `remoteChecksum` in `Package.swift`, builds and runs the
-tests, then commits `Release <package_version>` to main and tags `v<package_version>`. Failing tests stop it
-before anything is committed, pushed or tagged.
+The workflow first fails if either input isn't `x.y.z` or if `v<package_version>` already exists. Then it
+downloads `Shared-<kmp_version>.xcframework.zip` from the quran/mobile-sync GitHub release, computes its
+checksum, rewrites `remoteVersion` and `remoteChecksum` in `Package.swift`, builds and runs the tests, then
+commits `Release <package_version>` to main and tags `v<package_version>`. Failing tests stop it before
+anything is committed, pushed or tagged.
 
 ### Swift wrapper changes need a PR first
 
