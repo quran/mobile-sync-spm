@@ -121,13 +121,14 @@ final class DataServiceIntegrationTests: XCTestCase {
 
   func testLoggingSendsMobileSyncLogsToTheSink() async throws {
     let sink = LogSinkSpy()
-    MobileSyncLogging.configure(sink: sink, minSeverity: .error)
+    MobileSyncLogging.configure(sink: sink, minSeverity: .info)
     // Logging is process-wide, so later tests log to the console again rather than to this spy.
     defer { MobileSyncLogging.configure(sink: ConsoleLogSink(), minSeverity: .verbose) }
 
     _ = try? await database.quranDataService.createCollection(named: "  ")
 
-    let logged = sink.entries.contains { $0.severity == .error && $0.message.hasPrefix("Failed to add collection") }
+    // MobileSync logs a write the data rules reject, such as a blank name, at info rather than error.
+    let logged = sink.entries.contains { $0.severity == .info && $0.message.hasPrefix("Failed to add collection") }
     XCTAssertTrue(logged)
   }
 
