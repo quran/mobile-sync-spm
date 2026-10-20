@@ -40,7 +40,7 @@ public struct MobileSyncGraph: @unchecked Sendable {
   }
 
   /// Like ``shared(environment:clientID:clientSecret:)``, with the database in the file `databaseName`
-  /// instead of `quran.db`, so a test process can use a file no other process opens.
+  /// instead of `user_data.db`, so a test process can use a file no other process opens.
   package static func shared(
     environment: MobileSyncEnvironment,
     clientID: String,
