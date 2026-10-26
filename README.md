@@ -92,6 +92,12 @@ let user = auth.loggedInUser
 let headers = try await auth.authenticationHeaders() // For your own Quran.com requests.
 
 try await auth.signOut() // Also clears local data.
+
+// Yields the signed-in user (nil when signed out) now and after every change, such as a token refresh
+// that updates the profile, until its task is cancelled.
+for try await user in auth.loggedInUserUpdates {
+  print(user?.name ?? "Signed out")
+}
 ```
 
 Auth calls throw `MobileSyncAuthenticationError`.
