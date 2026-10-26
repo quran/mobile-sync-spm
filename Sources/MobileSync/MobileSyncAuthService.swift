@@ -19,6 +19,22 @@ public struct MobileSyncAuthService: @unchecked Sendable {
     service.loggedInUser.map(MobileSyncUser.init)
   }
 
+  /// The signed-in user now and after every change, such as a token refresh that updates the profile.
+  ///
+  /// It agrees with ``loggedInUser`` and skips repeats, so signing in from signed out yields only the new
+  /// user. nil means signed out, a sign-in in progress, or a session stored before MobileSync kept the
+  /// profile, until its next token refresh; check ``isLoggedIn`` to tell them apart.
+  ///
+  /// The sequence ends when its task is cancelled, so cancel the task to stop observing rather than
+  /// breaking out of the loop. It throws `CancellationError` when cancelled and
+  /// ``MobileSyncAuthenticationError`` otherwise.
+  public var loggedInUserUpdates: MobileSyncAsyncSequence<MobileSyncUser?> {
+    MobileSyncAsyncSequence(
+      LoggedInUserSequence(states: asyncSequence(for: service.authStateFlow)),
+      mapError: authenticationError(bridging:)
+    )
+  }
+
   /// Signs in, asking the identity provider to authenticate the user again.
   public func signInWithReauthentication() async throws(MobileSyncAuthenticationError) {
     do {
@@ -55,5 +71,46 @@ public struct MobileSyncAuthService: @unchecked Sendable {
     } catch {
       throw MobileSyncAuthenticationError(bridgedError: error)
     }
+  }
+}
+
+/// Passes cancellation through, like the data sequences, and maps everything else.
+private func authenticationError(bridging error: Error) -> Error {
+  if error is CancellationError {
+    return error
+  }
+  if (error as NSError).userInfo["KotlinException"] is KotlinCancellationException {
+    return CancellationError()
+  }
+  return MobileSyncAuthenticationError(bridgedError: error)
+}
+
+/// The signed-in user each auth state publishes, without repeats.
+struct LoggedInUserSequence<States: AsyncSequence>: AsyncSequence where States.Element == AuthState {
+  typealias Element = MobileSyncUser?
+
+  struct AsyncIterator: AsyncIteratorProtocol {
+    var states: States.AsyncIterator
+    // `.none` until the first user (which may be nil) is yielded.
+    var yielded: MobileSyncUser?? = .none
+
+    mutating func next() async throws -> MobileSyncUser?? {
+      while let state = try await states.next() {
+        // Idle, Loading and Error have no session, like `SyncAuthService.loggedInUser`.
+        let user = (state as? AuthState.Success)?.userInfo.map(MobileSyncUser.init)
+        if let yielded, yielded == user {
+          continue
+        }
+        yielded = .some(user)
+        return .some(user)
+      }
+      return nil
+    }
+  }
+
+  let states: States
+
+  func makeAsyncIterator() -> AsyncIterator {
+    AsyncIterator(states: states.makeAsyncIterator())
   }
 }
