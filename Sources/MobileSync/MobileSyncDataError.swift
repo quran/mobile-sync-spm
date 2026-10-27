@@ -4,7 +4,8 @@ internal import Shared
 public enum MobileSyncDataError: Error {
   /// Sign-out is clearing local data, so the write was rejected.
   case sessionResetInProgress(underlying: Error)
-  /// MobileSync rejected the request, for example an unknown collection or incompatible import options.
+  /// MobileSync rejected the request, for example an unknown collection, incompatible import options or a page
+  /// its mushaf doesn't have.
   case invalidArgument(underlying: Error)
   /// Any other failure, such as a database error.
   case failed(underlying: Error)

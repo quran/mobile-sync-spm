@@ -36,8 +36,16 @@ public struct MobileSyncDataService: @unchecked Sendable {
     sequence(asyncSequence(for: service.highlights)) { $0.compactMap(MobileSyncAyahHighlight.init) }
   }
 
-  public func readingBookmarksSequence() -> MobileSyncAsyncSequence<[MobileSyncReadingBookmark]> {
-    sequence(asyncSequence(for: service.readingBookmarks)) { $0.compactMap(MobileSyncReadingBookmark.init) }
+  /// The reading-bookmark slots that have ever been written, after every change; a slot that was never written
+  /// isn't in the list, and a cleared slot stays listed as ``MobileSyncReadingBookmark/Placement/unplaced``.
+  /// Page bookmarks are pages of `mushaf`, the mushaf the app shows, mapped from whichever mushaf they were set
+  /// in. A page `mushaf` can't show comes back ``MobileSyncReadingBookmark/Placement/unplaced``.
+  public func readingBookmarksSequence(mushaf: MobileSyncMushaf)
+    -> MobileSyncAsyncSequence<[MobileSyncReadingBookmark]>
+  {
+    sequence(asyncSequence(for: service.readingBookmarks(mushaf: mushaf.kotlinMushaf))) {
+      $0.compactMap(MobileSyncReadingBookmark.init)
+    }
   }
 
   public func readingSessionsSequence() -> MobileSyncAsyncSequence<[MobileSyncReadingSession]> {
@@ -210,27 +218,38 @@ public struct MobileSyncDataService: @unchecked Sendable {
     }
   }
 
+  /// Sets a slot to `page` of `mushaf`, numbered as ``MobileSyncMushaf`` describes.
+  ///
+  /// - Throws: `MobileSyncDataError.invalidArgument` when `mushaf` has no such page.
   public func setPageReadingBookmark(
     slot: MobileSyncReadingBookmarkSlot,
     page: Int,
+    mushaf: MobileSyncMushaf,
     timestamp: Date = Date()
   ) async throws -> MobileSyncReadingBookmark {
-    try await bridgingReadingBookmark {
+    guard let kotlinPage = Int32(exactly: page) else {
+      throw MobileSyncDataError.invalidArgument(underlying: PageOutOfRangeError(page: page))
+    }
+    return try await bridgingReadingBookmark {
       try await asyncFunction(
-        for: service.setPageReadingBookmark(slot: slot.kotlinSlot, page: Int32(page), timestamp: timestamp)
+        for: service.setPageReadingBookmark(
+          slot: slot.kotlinSlot, page: kotlinPage, mushaf: mushaf.kotlinMushaf, timestamp: timestamp)
       )
     }
   }
 
-  /// Renames a slot without moving its bookmark. A `nil` name clears it.
+  /// Renames a slot without moving its bookmark and returns it read in `mushaf`, like
+  /// ``readingBookmarksSequence(mushaf:)``. A `nil` name clears it.
   public func renameReadingBookmark(
     slot: MobileSyncReadingBookmarkSlot,
     name: String?,
+    mushaf: MobileSyncMushaf,
     timestamp: Date = Date()
   ) async throws -> MobileSyncReadingBookmark {
     try await bridgingReadingBookmark {
       try await asyncFunction(
-        for: service.renameReadingBookmark(slot: slot.kotlinSlot, name: name, timestamp: timestamp)
+        for: service.renameReadingBookmark(
+          slot: slot.kotlinSlot, name: name, mushaf: mushaf.kotlinMushaf, timestamp: timestamp)
       )
     }
   }
@@ -305,4 +324,9 @@ public struct MobileSyncDataService: @unchecked Sendable {
 /// A Kotlin result that holds a value this package doesn't know yet.
 struct UnknownValueError: Error {
   let type: String
+}
+
+/// A page number too large for MobileSync, so no mushaf has it.
+struct PageOutOfRangeError: Error {
+  let page: Int
 }

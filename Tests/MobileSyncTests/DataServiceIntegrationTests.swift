@@ -76,20 +76,21 @@ final class DataServiceIntegrationTests: XCTestCase {
 
   func testReadingBookmarks() async throws {
     let ayah = try await database.quranDataService.setAyahReadingBookmark(slot: .teal, sura: 36, ayah: 1, timestamp: date(100))
-    let page = try await database.quranDataService.setPageReadingBookmark(slot: .orange, page: 42, timestamp: date(200))
-    let renamed = try await database.quranDataService.renameReadingBookmark(slot: .teal, name: "Daily")
+    let page = try await database.quranDataService.setPageReadingBookmark(
+      slot: .orange, page: 42, mushaf: .madani1440, timestamp: date(200))
+    let renamed = try await database.quranDataService.renameReadingBookmark(slot: .teal, name: "Daily", mushaf: .madani1440)
     let cleared = try await database.quranDataService.clearReadingBookmark(slot: .orange)
-    let named = try await database.quranDataService.renameReadingBookmark(slot: .red, name: "Review")
+    let named = try await database.quranDataService.renameReadingBookmark(slot: .red, name: "Review", mushaf: .madani1440)
 
     XCTAssertEqual(ayah.placement, .ayah(sura: 36, ayah: 1))
     XCTAssertEqual(ayah.lastUpdated, date(100))
-    XCTAssertEqual(page.placement, .page(42, mushafID: MobileSyncReadingBookmark.madaniMushafID))
+    XCTAssertEqual(page.placement, .page(42, mushaf: .madani1440))
     XCTAssertEqual(renamed.placement, .ayah(sura: 36, ayah: 1))
     XCTAssertEqual(renamed.name, "Daily")
     XCTAssertEqual(cleared.placement, .unplaced)
     XCTAssertEqual(named.placement, .unplaced)
     XCTAssertEqual(named.name, "Review")
-    let stored = try await first(database.quranDataService.readingBookmarksSequence()) ?? []
+    let stored = try await first(database.quranDataService.readingBookmarksSequence(mushaf: .madani1440)) ?? []
     XCTAssertTrue(stored.contains(renamed))
     XCTAssertTrue(stored.contains(named))
   }

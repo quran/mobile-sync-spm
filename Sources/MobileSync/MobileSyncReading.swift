@@ -12,16 +12,13 @@ public enum MobileSyncReadingBookmarkSlot: Hashable, Sendable {
 public struct MobileSyncReadingBookmark: Hashable, Sendable {
   public enum Placement: Hashable, Sendable {
     case ayah(sura: Int, ayah: Int)
-    /// A page as `mushafID` numbers it. Pages set from this package are in
-    /// ``MobileSyncReadingBookmark/madaniMushafID``; pages set on Quran.com can be in another mushaf, such as
-    /// 6 for the 610-page and 7 for the 548-page IndoPak.
-    case page(Int, mushafID: Int)
-    /// A named slot that doesn't point anywhere.
+    /// A page of `mushaf`, the mushaf the bookmarks were read in, numbered as ``MobileSyncMushaf`` describes.
+    /// MobileSync maps a page set in another mushaf, here or on Quran.com, into it.
+    case page(Int, mushaf: MobileSyncMushaf)
+    /// A slot that doesn't point anywhere, a page bookmark the mushaf it was read in can't show, or a location set
+    /// elsewhere that the app can't show (such as a surah or juz bookmark).
     case unplaced
   }
-
-  /// The 604-page Madani mushaf.
-  public static let madaniMushafID = Int(PageReadingBookmark.companion.MADANI_MUSHAF_ID)
 
   public let id: String
   public let slot: MobileSyncReadingBookmarkSlot
@@ -82,14 +79,17 @@ extension MobileSyncReadingBookmarkSlot {
 }
 
 extension MobileSyncReadingBookmark {
-  /// Returns `nil` when the bookmark's slot or kind is unknown.
+  /// Returns `nil` when the bookmark's slot, kind or mushaf is unknown.
   init?(_ bookmark: any ReadingBookmark) {
     let placement: Placement
     switch bookmark {
     case let bookmark as AyahReadingBookmark:
       placement = .ayah(sura: Int(bookmark.sura), ayah: Int(bookmark.ayah))
     case let bookmark as PageReadingBookmark:
-      placement = .page(Int(bookmark.page), mushafID: Int(bookmark.mushafId))
+      guard let mushaf = MobileSyncMushaf(bookmark.mushaf) else {
+        return nil
+      }
+      placement = .page(Int(bookmark.page), mushaf: mushaf)
     case is EmptyReadingBookmark:
       placement = .unplaced
     default:

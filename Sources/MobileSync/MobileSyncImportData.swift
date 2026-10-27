@@ -123,8 +123,9 @@ public struct MobileSyncImportHighlight: Hashable, Sendable {
 public struct MobileSyncImportReadingBookmark: Hashable, Sendable {
   public enum Placement: Hashable, Sendable {
     case ayah(sura: Int, ayah: Int)
-    /// A page of the 604-page Madani mushaf, which MobileSync imports every page as.
-    case page(Int)
+    /// A page of `mushaf`, numbered as ``MobileSyncMushaf`` describes. A page the mushaf doesn't have is skipped;
+    /// with `deleteExisting: true`, its slot then ends up cleared, like a slot the import leaves out.
+    case page(Int, mushaf: MobileSyncMushaf)
   }
 
   public let slot: MobileSyncReadingBookmarkSlot
@@ -233,20 +234,23 @@ extension MobileSyncImportData {
           createdAt: $0.createdAt
         )
       },
-      readingBookmarks: readingBookmarks.map(\.kotlinBookmark)
+      readingBookmarks: readingBookmarks.compactMap(\.kotlinBookmark)
     )
   }
 }
 
 extension MobileSyncImportReadingBookmark {
-  var kotlinBookmark: ImportReadingBookmark {
+  /// `nil` for a page too large for MobileSync, which no mushaf has, so the import skips it.
+  var kotlinBookmark: ImportReadingBookmark? {
     switch placement {
     case let .ayah(sura, ayah):
       ImportReadingBookmark.Ayah(
         sura: Int32(sura), ayah: Int32(ayah), lastUpdated: lastUpdated, slot: slot.kotlinSlot, name: name)
-    case let .page(page):
-      ImportReadingBookmark.Page(
-        page: Int32(page), lastUpdated: lastUpdated, slot: slot.kotlinSlot, name: name)
+    case let .page(page, mushaf):
+      Int32(exactly: page).map {
+        ImportReadingBookmark.Page(
+          page: $0, mushaf: mushaf.kotlinMushaf, lastUpdated: lastUpdated, slot: slot.kotlinSlot, name: name)
+      }
     }
   }
 }

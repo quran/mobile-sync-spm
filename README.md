@@ -10,7 +10,7 @@ Add the package with Swift Package Manager (iOS 15 or later, `swift-tools-versio
 
 ```swift
 dependencies: [
-  .package(url: "https://github.com/quran/mobile-sync-spm.git", .upToNextMinor(from: "0.2.1")),
+  .package(url: "https://github.com/quran/mobile-sync-spm.git", .upToNextMinor(from: "0.4.0")),
 ],
 ```
 
@@ -64,6 +64,7 @@ let collection = try await data.createCollection(named: "Study")
 _ = try await data.addAyahBookmarkToCollection(collectionID: collection.id, sura: 2, ayah: 255)
 _ = try await data.setAyahHighlight(sura: 1, ayah: 1, color: .yellow)
 _ = try await data.setAyahReadingBookmark(slot: .teal, sura: 18, ayah: 10)
+_ = try await data.setPageReadingBookmark(slot: .orange, page: 537, mushaf: .indopak15Lines)
 
 // Each sequence yields the latest values after every change, until its task is cancelled.
 for try await notes in data.notesSequence() {
@@ -71,10 +72,16 @@ for try await notes in data.notesSequence() {
 }
 ```
 
+Page reading bookmarks take the `MobileSyncMushaf` the app shows: `.madani1405`, `.madani1440` (604 pages each) or
+`.indopak15Lines`, numbered 2…611 as the apps number it (page 1 is the cover). `readingBookmarksSequence(mushaf:)`
+and `renameReadingBookmark(slot:name:mushaf:)` return page bookmarks as pages of that mushaf, mapped from whichever
+mushaf they were set in, here or on Quran.com; a page it can't show comes back `.unplaced`. Setting a page the
+mushaf doesn't have throws `MobileSyncDataError.invalidArgument`, and importing one skips it.
+
 `MobileSyncDataService` also covers updating and deleting notes and collections, removing collection bookmarks
-and highlights, setting page reading bookmarks, renaming and clearing reading bookmarks, adding and updating
-reading sessions, and importing local data (`importData(_:deleteExisting:trackHistory:)`). Calls that create,
-add, set, update, rename or clear take a `timestamp` that defaults to now. Calls throw `CancellationError`,
+and highlights, renaming and clearing reading bookmarks, adding and updating reading sessions, and importing local
+data (`importData(_:deleteExisting:trackHistory:)`). Calls that create, add, set, update, rename or clear take a
+`timestamp` that defaults to now. Calls throw `CancellationError`,
 `MobileSyncTextLengthLimitError`, the collection errors (`MobileSyncReadOnlyCollectionError`,
 `MobileSyncDuplicateCollectionNameError`, `MobileSyncReservedCollectionNameError`) documented on each
 collection write, or `MobileSyncDataError`.
