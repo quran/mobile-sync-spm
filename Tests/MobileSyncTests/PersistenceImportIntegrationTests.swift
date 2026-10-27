@@ -101,7 +101,7 @@ final class PersistenceImportIntegrationTests: XCTestCase {
   func testReadingBookmarkImportUsesCurrentSlotsAndSkipsTrackedReplay() async throws {
     let timestamp = Date(timeIntervalSince1970: 123)
     let bookmark = MobileSyncImportReadingBookmark(
-      slot: .teal, placement: .page(42), lastUpdated: timestamp, name: "Morning")
+      slot: .teal, placement: .page(42, mushaf: .madani1440), lastUpdated: timestamp, name: "Morning")
     let data = MobileSyncImportData(readingBookmarks: [bookmark])
 
     let inserted = try await database.quranDataService.importData(data, trackHistory: true)
@@ -110,10 +110,10 @@ final class PersistenceImportIntegrationTests: XCTestCase {
     XCTAssertEqual(inserted.readingBookmarksImported, 1)
     XCTAssertEqual(replay.alreadyProcessed, 1)
     XCTAssertFalse(replay.changed)
-    let iterator = database.quranDataService.readingBookmarksSequence().makeAsyncIterator()
+    let iterator = database.quranDataService.readingBookmarksSequence(mushaf: .madani1440).makeAsyncIterator()
     let bookmarks = try await iterator.next()
     let stored = try XCTUnwrap(bookmarks?.first { $0.slot == .teal })
-    XCTAssertEqual(stored.placement, .page(42, mushafID: MobileSyncReadingBookmark.madaniMushafID))
+    XCTAssertEqual(stored.placement, .page(42, mushaf: .madani1440))
     XCTAssertEqual(stored.name, "Morning")
     XCTAssertEqual(stored.lastUpdated, timestamp)
   }

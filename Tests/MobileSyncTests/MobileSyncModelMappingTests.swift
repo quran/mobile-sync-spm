@@ -72,12 +72,23 @@ final class MobileSyncModelMappingTests: XCTestCase {
 
   func testMapsPageReadingBookmarksWithTheirMushaf() {
     let bookmark = PageReadingBookmark(
-      page: 255, lastUpdated: date(10), id: "3", slot: .orange, name: "Study", mushafId: 6)
+      page: 255, mushaf: .indopak15Lines, lastUpdated: date(10), id: "3", slot: .orange, name: "Study")
 
     XCTAssertEqual(
       MobileSyncReadingBookmark(bookmark),
       MobileSyncReadingBookmark(
-        id: "3", slot: .orange, placement: .page(255, mushafID: 6), name: "Study", lastUpdated: date(10)))
+        id: "3", slot: .orange, placement: .page(255, mushaf: .indopak15Lines), name: "Study", lastUpdated: date(10)))
+  }
+
+  func testMapsEveryKotlinMushafBothWays() throws {
+    XCTAssertEqual(Mushaf.entries, [.madani1405, .madani1440, .indopak15Lines])
+    XCTAssertEqual(MobileSyncMushaf(.madani1405), .madani1405)
+    XCTAssertEqual(MobileSyncMushaf(.madani1440), .madani1440)
+    XCTAssertEqual(MobileSyncMushaf(.indopak15Lines), .indopak15Lines)
+    for kotlin in Mushaf.entries {
+      let swift = try XCTUnwrap(MobileSyncMushaf(kotlin), "\(kotlin.name) has no Swift mushaf")
+      XCTAssertEqual(swift.kotlinMushaf, kotlin)
+    }
   }
 
   func testMapsEveryKotlinHighlightColorBothWays() throws {
@@ -114,7 +125,8 @@ final class MobileSyncModelMappingTests: XCTestCase {
       highlights: [MobileSyncImportHighlight(sura: 2, ayah: 1, color: .yellow, lastUpdated: date(40))],
       readingBookmarks: [
         MobileSyncImportReadingBookmark(slot: .teal, placement: .ayah(sura: 36, ayah: 1), lastUpdated: date(50)),
-        MobileSyncImportReadingBookmark(slot: .red, placement: .page(42), lastUpdated: date(60), name: "Review"),
+        MobileSyncImportReadingBookmark(
+          slot: .red, placement: .page(537, mushaf: .indopak15Lines), lastUpdated: date(60), name: "Review"),
       ]
     )
 
@@ -137,10 +149,19 @@ final class MobileSyncModelMappingTests: XCTestCase {
         ],
         readingBookmarks: [
           ImportReadingBookmark.Ayah(sura: 36, ayah: 1, lastUpdated: date(50), slot: .teal, name: nil),
-          ImportReadingBookmark.Page(page: 42, lastUpdated: date(60), slot: .red, name: "Review"),
+          ImportReadingBookmark.Page(
+            page: 537, mushaf: .indopak15Lines, lastUpdated: date(60), slot: .red, name: "Review"),
         ]
       )
     )
+  }
+
+  func testSkipsImportedPagesTooLargeForMobileSync() {
+    let data = MobileSyncImportData(readingBookmarks: [
+      MobileSyncImportReadingBookmark(slot: .teal, placement: .page(.max, mushaf: .madani1440), lastUpdated: date(10))
+    ])
+
+    XCTAssertEqual(data.kotlinData.readingBookmarks, [])
   }
 
   func testMapsImportResult() {
