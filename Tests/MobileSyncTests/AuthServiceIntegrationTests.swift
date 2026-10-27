@@ -18,10 +18,28 @@ final class AuthServiceIntegrationTests: XCTestCase {
   }
 
   func testLoggedInUserUpdatesStartSignedOut() async throws {
-    let user = try await database.authService.loggedInUserUpdates.makeAsyncIterator().next()
+    let yielded = expectation(description: "Yielded the first user")
+    let updates = database.authService.loggedInUserUpdates
+    // Observes in a task and cancels it, so the Kotlin collector stops with the test.
+    let observation = Task { () -> [MobileSyncUser?] in
+      var users: [MobileSyncUser?] = []
+      do {
+        for try await user in updates {
+          users.append(user)
+          if users.count == 1 {
+            yielded.fulfill()
+          }
+        }
+      } catch is CancellationError {}
+      return users
+    }
+
+    await fulfillment(of: [yielded], timeout: 10)
+    observation.cancel()
+    let users = try await observation.value
 
     // The sequence yields one value, nil, rather than ending.
-    XCTAssertEqual(user, .some(nil))
+    XCTAssertEqual(users.first, .some(nil))
   }
 
   func testLoggedInUserUpdatesEndWhenTheirTaskIsCancelled() async throws {

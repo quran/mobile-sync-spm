@@ -15,15 +15,12 @@ public struct MobileSyncAuthService: @unchecked Sendable {
     service.isLoggedIn()
   }
 
-  public var loggedInUser: MobileSyncUser? {
-    service.loggedInUser.map(MobileSyncUser.init)
-  }
-
   /// The signed-in user now and after every change, such as a token refresh that updates the profile.
   ///
-  /// It agrees with ``loggedInUser`` and skips repeats, so signing in from signed out yields only the new
-  /// user. nil means signed out, a sign-in in progress, or a session stored before MobileSync kept the
-  /// profile, until its next token refresh; check ``isLoggedIn`` to tell them apart.
+  /// It yields the current user first, then each change, skipping repeats, so signing in from signed out
+  /// yields only the new user. The user is nil when signed out, while a sign-in is in progress, or for a
+  /// session stored before MobileSync kept the profile, until its next token refresh; check
+  /// ``isLoggedIn`` to tell those apart.
   ///
   /// The sequence ends when its task is cancelled, so cancel the task to stop observing rather than
   /// breaking out of the loop. It throws `CancellationError` when cancelled and
@@ -96,7 +93,7 @@ struct LoggedInUserSequence<States: AsyncSequence>: AsyncSequence where States.E
 
     mutating func next() async throws -> MobileSyncUser?? {
       while let state = try await states.next() {
-        // Idle, Loading and Error have no session, like `SyncAuthService.loggedInUser`.
+        // Success carries the session's user; Idle, Loading and Error have no session.
         let user = (state as? AuthState.Success)?.userInfo.map(MobileSyncUser.init)
         if let yielded, yielded == user {
           continue

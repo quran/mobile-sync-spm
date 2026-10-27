@@ -88,16 +88,19 @@ let auth = graph.authService
 if try await !auth.refreshAuthentication() {
   try await auth.signInWithReauthentication()
 }
-let user = auth.loggedInUser
 let headers = try await auth.authenticationHeaders() // For your own Quran.com requests.
 
 try await auth.signOut() // Also clears local data.
 
-// Yields the signed-in user (nil when signed out) now and after every change, such as a token refresh
-// that updates the profile, until its task is cancelled.
-for try await user in auth.loggedInUserUpdates {
-  print(user?.name ?? "Signed out")
+// Yields the signed-in user now and after every change, such as a token refresh that updates the
+// profile. nil means no profile: signed out, signing in, or a session stored before MobileSync kept the
+// profile; check `auth.isLoggedIn` to tell them apart.
+let observation = Task {
+  for try await user in auth.loggedInUserUpdates {
+    print(user?.name ?? "No profile")
+  }
 }
+observation.cancel() // Stops observing; cancel the task rather than breaking out of the loop.
 ```
 
 Auth calls throw `MobileSyncAuthenticationError`.

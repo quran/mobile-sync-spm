@@ -108,7 +108,6 @@ final class DataServiceIntegrationTests: XCTestCase {
     let auth = database.authService
 
     XCTAssertFalse(auth.isLoggedIn)
-    XCTAssertNil(auth.loggedInUser)
     let headers = try await auth.authenticationHeaders()
     XCTAssertEqual(headers, [:])
     let refreshed = try await auth.refreshAuthentication()
