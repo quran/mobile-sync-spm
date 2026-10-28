@@ -131,13 +131,12 @@ final class MobileSyncActivityMappingTests: XCTestCase {
 
     let mapped = try XCTUnwrap(MobileSyncHeldItem(bookmark))
 
-    let expectedCollection = MobileSyncHeldItem(
-      type: .collection, id: "3", collectionID: nil, reason: .tooLong, waitingOn: nil, httpStatus: nil, serverCode: nil)
     XCTAssertEqual(
       mapped,
       MobileSyncHeldItem(
         type: .collectionBookmark, id: "2:255", collectionID: "3", reason: .waitingOnParent,
-        waitingOn: expectedCollection, httpStatus: nil, serverCode: nil))
+        waitingOn: MobileSyncHeldItem.Blocker(type: .collection, id: "3", collectionID: nil, reason: .tooLong),
+        httpStatus: nil, serverCode: nil))
   }
 
   private func date(_ seconds: TimeInterval) -> Date {

@@ -124,6 +124,23 @@ public struct MobileSyncRunError: Hashable, Sendable {
 /// It stays on the device and syncs again once the user edits it into something the server accepts, the hold
 /// expires, or an update of MobileSync releases every hold. It never carries user data or server messages.
 public struct MobileSyncHeldItem: Hashable, Sendable {
+  /// The held item another one waits on. It is in the held items too, and waits on nothing itself.
+  public struct Blocker: Hashable, Sendable {
+    public let type: MobileSyncResourceType
+    /// The held item's ``MobileSyncHeldItem/id``.
+    public let id: String
+    /// The held item's ``MobileSyncHeldItem/collectionID``.
+    public let collectionID: String?
+    public let reason: MobileSyncHeldReason
+
+    public init(type: MobileSyncResourceType, id: String, collectionID: String?, reason: MobileSyncHeldReason) {
+      self.type = type
+      self.id = id
+      self.collectionID = collectionID
+      self.reason = reason
+    }
+  }
+
   public let type: MobileSyncResourceType
   /// The item's id as the other models carry it; for a ``MobileSyncResourceType/collectionBookmark``, its
   /// ``MobileSyncCollectionBookmark/bookmarkID`` (`sura:ayah`). An item held while being deleted is no longer in
@@ -139,19 +156,14 @@ public struct MobileSyncHeldItem: Hashable, Sendable {
   public let serverCode: String?
   /// For ``MobileSyncHeldReason/waitingOnParent`` and ``MobileSyncHeldReason/waitingOnOtherItem``, the held item
   /// it waits on.
-  public var waitingOn: MobileSyncHeldItem? {
-    waitingOnStorage.first
-  }
-
-  // At most one item: an array lets the struct hold another of its own type.
-  private let waitingOnStorage: [MobileSyncHeldItem]
+  public let waitingOn: Blocker?
 
   public init(
     type: MobileSyncResourceType,
     id: String,
     collectionID: String?,
     reason: MobileSyncHeldReason,
-    waitingOn: MobileSyncHeldItem?,
+    waitingOn: Blocker?,
     httpStatus: Int?,
     serverCode: String?
   ) {
@@ -159,7 +171,7 @@ public struct MobileSyncHeldItem: Hashable, Sendable {
     self.id = id
     self.collectionID = collectionID
     self.reason = reason
-    self.waitingOnStorage = waitingOn.map { [$0] } ?? []
+    self.waitingOn = waitingOn
     self.httpStatus = httpStatus
     self.serverCode = serverCode
   }
@@ -304,12 +316,12 @@ extension MobileSyncHeldItem {
     guard let type = MobileSyncResourceType(item.type), let reason = MobileSyncHeldReason(item.reason) else {
       return nil
     }
-    var waitingOn: MobileSyncHeldItem?
-    if let kotlinWaitingOn = item.waitingOn {
-      guard let mapped = MobileSyncHeldItem(kotlinWaitingOn) else {
+    var waitingOn: Blocker?
+    if let blocker = item.waitingOn {
+      guard let type = MobileSyncResourceType(blocker.type), let reason = MobileSyncHeldReason(blocker.reason) else {
         return nil
       }
-      waitingOn = mapped
+      waitingOn = Blocker(type: type, id: blocker.id, collectionID: blocker.collectionId, reason: reason)
     }
     self.init(
       type: type,
