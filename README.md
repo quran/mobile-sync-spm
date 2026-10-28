@@ -144,11 +144,11 @@ debug builds either call trips an assertion.
 
 ## Development
 
-Run the tests the way CI does (`.github/workflows/ci.yml`). The product schemes have no test action, so use
-the `MobileSync-Package` scheme on an iPhone simulator:
+Run the tests the way CI does (`.github/workflows/ci.yml`). The product schemes have no test action, so
+`scripts/test.sh` runs the `MobileSync-Package` scheme on the first available iPhone simulator:
 
 ```bash
-xcrun xcodebuild -scheme MobileSync-Package -sdk iphonesimulator -destination "platform=iOS Simulator,id=<simulator UDID>" build test
+scripts/test.sh
 ```
 
 ### Using a locally built XCFramework
@@ -163,7 +163,7 @@ at it. The path must be relative to this package's root; SwiftPM rejects absolut
 ```
 
 ```bash
-MOBILE_SYNC_XCFRAMEWORK_PATH=../mobile-sync/umbrella/build/XCFrameworks/debug/Shared.xcframework xcrun xcodebuild -scheme MobileSync-Package -sdk iphonesimulator -destination "platform=iOS Simulator,id=<simulator UDID>" build test
+MOBILE_SYNC_XCFRAMEWORK_PATH=../mobile-sync/umbrella/build/XCFrameworks/debug/Shared.xcframework scripts/test.sh
 ```
 
 Xcode reads the variable when it launches, so quit it, then start it with the variable set to use the local
