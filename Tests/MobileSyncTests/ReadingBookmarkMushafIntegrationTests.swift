@@ -39,9 +39,33 @@ final class ReadingBookmarkMushafIntegrationTests: XCTestCase {
     XCTAssertEqual(indoPak, .page(537, mushaf: .indopak15Lines))
   }
 
+  func testShemerlyPageIsReadInTheOtherHafsMushafs() async throws {
+    let set = try await database.quranDataService.setPageReadingBookmark(
+      slot: .teal, page: 250, mushaf: .shemerly, timestamp: date(100))
+
+    XCTAssertEqual(set.placement, .page(250, mushaf: .shemerly))
+    let madani1440 = try await tealPlacement(in: .madani1440)
+    let shemerly = try await tealPlacement(in: .shemerly)
+    XCTAssertEqual(madani1440, .page(302, mushaf: .madani1440))
+    XCTAssertEqual(shemerly, .page(250, mushaf: .shemerly))
+  }
+
+  func testRiwayahPageIsReadOnlyInItsOwnMushaf() async throws {
+    _ = try await database.quranDataService.setPageReadingBookmark(
+      slot: .teal, page: 300, mushaf: .warsh, timestamp: date(100))
+
+    let warsh = try await tealPlacement(in: .warsh)
+    let qaloun = try await tealPlacement(in: .qaloun)
+    let madani1440 = try await tealPlacement(in: .madani1440)
+    XCTAssertEqual(warsh, .page(300, mushaf: .warsh))
+    XCTAssertEqual(qaloun, .unplaced)
+    XCTAssertEqual(madani1440, .unplaced)
+  }
+
   func testPageTheMushafDoesNotHaveThrowsInvalidArgument() async throws {
     let invalidPages: [(MobileSyncMushaf, Int)] = [
-      (.madani1405, 605), (.madani1440, 0), (.indopak15Lines, 1), (.indopak15Lines, 612),
+      (.madani1405, 605), (.madani1440, 0), (.indopak15Lines, 1), (.indopak15Lines, 612), (.shemerly, 522),
+      (.warsh, 605), (.qaloun, 0),
     ]
     for (mushaf, page) in invalidPages {
       do {

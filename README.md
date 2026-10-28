@@ -72,10 +72,13 @@ for try await notes in data.notesSequence() {
   print(notes.map(\.body))
 }
 let notes = try await data.notesSequence().first { _ in true } // The current notes.
+// A cancelled task ends the sequence (`nil`) rather than throwing, so check for it after `.first`.
+try Task.checkCancellation()
 ```
 
-Page reading bookmarks take the `MobileSyncMushaf` the app shows: `.madani1405`, `.madani1440` (604 pages each) or
-`.indopak15Lines`, numbered 2…611 as the apps number it (page 1 is the cover). `readingBookmarksSequence(mushaf:)`
+Page reading bookmarks take the `MobileSyncMushaf` the app shows: `.madani1405`, `.madani1440` (604 pages each),
+`.indopak15Lines`, numbered 2…611 as the apps number it (page 1 is the cover), `.shemerly` (521 pages), or the
+riwayat `.warsh` and `.qaloun` (604 pages each), whose pages map to no other mushaf. `readingBookmarksSequence(mushaf:)`
 and `renameReadingBookmark(slot:name:mushaf:)` return page bookmarks as pages of that mushaf, mapped from whichever
 mushaf they were set in, here or on Quran.com; a page it can't show comes back `.unplaced`. Setting a page the
 mushaf doesn't have throws `MobileSyncDataError.invalidArgument`, and importing one skips it.
@@ -87,6 +90,33 @@ data (`importData(_:deleteExisting:trackHistory:)`). Calls that create, add, set
 `MobileSyncTextLengthLimitError`, the collection errors (`MobileSyncReadOnlyCollectionError`,
 `MobileSyncDuplicateCollectionNameError`, `MobileSyncReservedCollectionNameError`) documented on each
 collection write, or `MobileSyncDataError`.
+
+Sync activity, for a "Sync now" button, "Last synced", a sync log, or a sign-out warning:
+
+```swift
+data.triggerSync(immediately: true) // "Sync now". Without a signed-in user, nothing syncs.
+data.syncOnForeground() // On each return from the background (not at launch); the run's trigger is .foreground.
+
+// "Last synced": the newest succeeded run. The history is stored, unlike the status.
+let observation = Task {
+  for try await runs in data.syncHistorySequence() {
+    let lastSynced = runs.first { $0.result == .succeeded }?.endedAt
+    print(lastSynced.map { "Last synced \($0)" } ?? "Never synced")
+  }
+}
+observation.cancel() // Stops observing.
+
+// The sign-out warning: how many items have changes the server doesn't have yet, which signing out deletes:
+// `pending` ones the next sync sends and `held` ones that don't sync until fixed.
+let unsynced = try await data.unsyncedItemsSequence().first { _ in true }
+```
+
+`syncStatusSequence()` is for a live spinner or error: `MobileSyncStatus` isn't stored, so it is `.idle` after launch
+and has no time while `.syncing`. Between a failed attempt and its retry it is `.retrying`, with the error and when the
+retry starts; a "Sync now" then runs at once. `syncHistorySequence()` yields the newest sync runs (`MobileSyncRun`:
+trigger, result, counts and any `MobileSyncRunError`), `heldItemsSequence()` the items that don't sync
+(`MobileSyncHeldItem`: why, and the held item one waits on as a `MobileSyncHeldItem.Blocker`, which waits on nothing
+itself), and `unsyncedItemsSequence()` the pending and held counts (`MobileSyncUnsyncedItemCounts`) after every change.
 
 Signing in, which also syncs the user's data with Quran.com:
 

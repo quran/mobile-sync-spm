@@ -81,10 +81,13 @@ final class MobileSyncModelMappingTests: XCTestCase {
   }
 
   func testMapsEveryKotlinMushafBothWays() throws {
-    XCTAssertEqual(Mushaf.entries, [.madani1405, .madani1440, .indopak15Lines])
+    XCTAssertEqual(Mushaf.entries, [.madani1405, .madani1440, .indopak15Lines, .shemerly, .warsh, .qaloun])
     XCTAssertEqual(MobileSyncMushaf(.madani1405), .madani1405)
     XCTAssertEqual(MobileSyncMushaf(.madani1440), .madani1440)
     XCTAssertEqual(MobileSyncMushaf(.indopak15Lines), .indopak15Lines)
+    XCTAssertEqual(MobileSyncMushaf(.shemerly), .shemerly)
+    XCTAssertEqual(MobileSyncMushaf(.warsh), .warsh)
+    XCTAssertEqual(MobileSyncMushaf(.qaloun), .qaloun)
     for kotlin in Mushaf.entries {
       let swift = try XCTUnwrap(MobileSyncMushaf(kotlin), "\(kotlin.name) has no Swift mushaf")
       XCTAssertEqual(swift.kotlinMushaf, kotlin)

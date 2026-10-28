@@ -22,8 +22,9 @@ public struct MobileSyncAuthService: @unchecked Sendable {
   /// session stored before MobileSync kept the profile, until its next token refresh; check
   /// ``isLoggedIn`` to tell those apart.
   ///
-  /// Cancelling its task, breaking out of the loop or taking `.first` stops observing. It throws
-  /// `CancellationError` when cancelled and ``MobileSyncAuthenticationError`` otherwise.
+  /// Cancelling its task, breaking out of the loop or taking `.first` stops observing. A cancelled task ends the
+  /// sequence: the loop ends and `.first` returns `nil`, so check `Task.isCancelled` after it; asking again
+  /// after that throws `CancellationError`. It throws ``MobileSyncAuthenticationError`` otherwise.
   public var loggedInUserUpdates: MobileSyncAsyncSequence<MobileSyncUser?> {
     MobileSyncAsyncSequence(
       LoggedInUserSequence(states: asyncSequence(for: service.authStateFlow)),
