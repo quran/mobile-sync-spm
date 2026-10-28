@@ -99,6 +99,10 @@ jobs:
           package.write_text(data)
           PY
 
+      # Pushes from this workflow use GITHUB_TOKEN and don't trigger CI, so this is the only check a release gets.
+      - name: Check KMP-NativeCoroutines matches mobile-sync
+        run: scripts/check-native-coroutines.sh
+
       - name: Setting up Xcode
         run: sudo xcode-select -s "/Applications/Xcode_26.2.app"
 

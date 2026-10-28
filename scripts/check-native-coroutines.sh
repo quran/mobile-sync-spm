@@ -11,16 +11,16 @@ fail() {
   exit 1
 }
 
-# Exactly one match of a sed -nE expression in a file, or nothing.
+# Exactly one match of a sed -nE expression in a file, ignoring CRs, or nothing.
 single_match() {
   local matches
-  matches="$(sed -nE "$1" "$2")"
+  matches="$(tr -d '\r' < "$2" | sed -nE "$1")"
   if [[ -n "$matches" && "$(wc -l <<< "$matches")" -eq 1 ]]; then
     echo "$matches"
   fi
 }
 
-remote_version="$(single_match 's/^let remoteVersion = "([^"]*)"$/\1/p' Package.swift)"
+remote_version="$(single_match 's|^let remoteVersion = "([^"]*)"[[:space:]]*(//.*)?$|\1|p' Package.swift)"
 if [[ ! "$remote_version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
   fail "Couldn't read remoteVersion from Package.swift: expected one 'let remoteVersion = \"x.y.z\"' line, got '${remote_version}'."
 fi
@@ -39,11 +39,12 @@ swift_version="$(sed -E 's/.*"([^"]+)"$/\1/' <<< "$swift_matches")"
 toml_url="https://raw.githubusercontent.com/quran/mobile-sync/v${remote_version}/gradle/libs.versions.toml"
 toml_file="$(mktemp)"
 trap 'rm -f "$toml_file"' EXIT
-if ! curl --fail --silent --show-error --location --retry 3 --output "$toml_file" "$toml_url"; then
+if ! curl --fail --silent --show-error --location --connect-timeout 10 --max-time 30 \
+  --retry 5 --retry-delay 2 --retry-connrefused --output "$toml_file" "$toml_url"; then
   fail "Couldn't fetch ${toml_url}. Is v${remote_version} (remoteVersion in Package.swift) a quran/mobile-sync tag?"
 fi
 
-kotlin_version="$(single_match 's/^native-coroutines[[:space:]]*=[[:space:]]*"([^"]+)"[[:space:]]*$/\1/p' "$toml_file")"
+kotlin_version="$(single_match 's/^[[:space:]]*native-coroutines[[:space:]]*=[[:space:]]*"([^"]+)"[[:space:]]*(#.*)?$/\1/p' "$toml_file")"
 if [[ -z "$kotlin_version" ]]; then
   fail "Couldn't read the native-coroutines version from ${toml_url}: expected one 'native-coroutines = \"…\"' line."
 fi

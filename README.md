@@ -155,7 +155,7 @@ scripts/test.sh
 ```
 
 The KMP-NativeCoroutines version pinned in `Package.swift` must match `native-coroutines` in mobile-sync's
-`gradle/libs.versions.toml` at the `remoteVersion` tag, since the Swift package and the Kotlin plugin that builds
+`gradle/libs.versions.toml` at tag `v<remoteVersion>`, since the Swift package and the Kotlin plugin that builds
 `Shared` are two halves of one library. CI checks it with `scripts/check-native-coroutines.sh`, which also runs
 locally; bump both together.
 
