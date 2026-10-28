@@ -48,7 +48,7 @@ let package = Package(
   dependencies: [
     .package(
       url: "https://github.com/rickclephas/KMP-NativeCoroutines.git",
-      exact: "1.0.0-ALPHA-48"
+      exact: "1.0.6"
     )
   ],
   targets: [
