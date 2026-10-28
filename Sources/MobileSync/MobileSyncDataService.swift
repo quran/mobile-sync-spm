@@ -85,19 +85,10 @@ public struct MobileSyncDataService: @unchecked Sendable {
   /// How many items have local changes the server doesn't have yet, held items included, after every change.
   /// Sign-out deletes them, so an app can warn with this count. It may over-count before the first sync.
   ///
-  /// Every write re-reads it, so observe it only while it's shown, and cancel the task to stop observing rather
-  /// than breaking out of the loop: the collector keeps running until then. For a one-off read, such as a sign-out
-  /// warning, use ``unsyncedItemCount()``.
+  /// Every write re-reads it, so observe it only while it's shown, such as a sign-out warning, and cancel the task
+  /// to stop observing rather than breaking out of the loop: the collector keeps running until then.
   public func unsyncedItemCountSequence() -> MobileSyncAsyncSequence<Int> {
     sequence(asyncSequence(for: service.unsyncedItemCount)) { $0.intValue }
-  }
-
-  /// How many items have local changes the server doesn't have yet, like ``unsyncedItemCountSequence()``, read once.
-  public func unsyncedItemCount() async throws -> Int {
-    guard let count = try await firstValue(of: { [self] in unsyncedItemCountSequence() }) else {
-      throw MobileSyncDataError.failed(underlying: EndedSequenceError())
-    }
-    return count
   }
 
   /// Schedules a sync when the user is signed in.
@@ -381,9 +372,6 @@ public struct MobileSyncDataService: @unchecked Sendable {
 struct UnknownValueError: Error {
   let type: String
 }
-
-/// A MobileSync sequence that ended without a value.
-struct EndedSequenceError: Error {}
 
 /// A page number too large for MobileSync, so no mushaf has it.
 struct PageOutOfRangeError: Error {

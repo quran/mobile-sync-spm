@@ -75,25 +75,3 @@ private struct LastOwner<Value>: @unchecked Sendable {
     self.value = value
   }
 }
-
-/// The first value of the sequence `makeSequence` returns, or `nil` when it ends first.
-///
-/// A MobileSync collector keeps running until the task iterating it is cancelled while it waits for a value; breaking
-/// out of a loop leaves it running. So this iterates in a child task and, after the first value, cancels that task and
-/// asks once more, which stops the collector.
-package func firstValue<Element: Sendable>(
-  of makeSequence: @escaping @Sendable () -> MobileSyncAsyncSequence<Element>
-) async throws -> Element? {
-  try await withThrowingTaskGroup(of: Element?.self) { group in
-    group.addTask {
-      let iterator = makeSequence().makeAsyncIterator()
-      guard let first = try await iterator.next() else {
-        return nil
-      }
-      withUnsafeCurrentTask { $0?.cancel() }
-      _ = try? await iterator.next()
-      return first
-    }
-    return try await group.next() ?? nil
-  }
-}

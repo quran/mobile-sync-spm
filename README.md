@@ -104,7 +104,12 @@ let observation = Task {
 observation.cancel() // Stops observing; cancel the task rather than breaking out of the loop.
 
 // The sign-out warning: how many items have changes the server doesn't have yet, which signing out deletes.
-let unsynced = try await data.unsyncedItemCount()
+let warning = Task {
+  for try await unsynced in data.unsyncedItemCountSequence() {
+    print("Signing out deletes \(unsynced) unsynced items")
+  }
+}
+warning.cancel() // Once the warning is dismissed.
 ```
 
 `syncStatusSequence()` is for a live spinner or error: `MobileSyncStatus` isn't stored, so it is `.idle` after

@@ -18,13 +18,13 @@ final class SyncActivityIntegrationTests: XCTestCase {
   }
 
   func testSyncStatusIsIdleWithoutASync() async throws {
-    let status = try await first { $0.syncStatusSequence() }
+    let status = try await database.quranDataService.syncStatusSequence().first { _ in true }
 
     XCTAssertEqual(status, .idle)
   }
 
   func testSyncHistoryIsEmptyWithoutASync() async throws {
-    let runs = try await first { $0.syncHistorySequence() }
+    let runs = try await database.quranDataService.syncHistorySequence().first { _ in true }
 
     XCTAssertEqual(runs, [])
   }
@@ -34,51 +34,24 @@ final class SyncActivityIntegrationTests: XCTestCase {
     try await database.quranDataService.createNote(
       body: "Reflection", startSura: 2, startAyah: 1, endSura: 2, endAyah: 5, timestamp: date(100))
 
-    let held = try await first { $0.heldItemsSequence() }
+    let held = try await database.quranDataService.heldItemsSequence().first { _ in true }
 
     XCTAssertEqual(held, [])
   }
 
   func testUnsyncedItemCountSequenceCountsANewNote() async throws {
     let service = database.quranDataService
-    let observation = Task {
-      var counts: [Int] = []
-      do {
-        for try await count in service.unsyncedItemCountSequence() {
-          counts.append(count)
-          if counts.count == 1 {
-            try await service.createNote(
-              body: "Reflection", startSura: 2, startAyah: 1, endSura: 2, endAyah: 5, timestamp: Date())
-          } else {
-            // Cancelling, not breaking out, stops the collector; the loop then ends.
-            withUnsafeCurrentTask { $0?.cancel() }
-          }
-        }
-      } catch is CancellationError {}
-      return counts
+    var counts: [Int] = []
+    for try await count in service.unsyncedItemCountSequence() {
+      counts.append(count)
+      guard counts.count == 1 else {
+        break
+      }
+      try await service.createNote(
+        body: "Reflection", startSura: 2, startAyah: 1, endSura: 2, endAyah: 5, timestamp: Date())
     }
 
-    let counts = try await observation.value
     XCTAssertEqual(counts, [0, 1])
-  }
-
-  func testUnsyncedItemCountReadsTheCountOnce() async throws {
-    let before = try await database.quranDataService.unsyncedItemCount()
-
-    try await database.quranDataService.createNote(
-      body: "Reflection", startSura: 2, startAyah: 1, endSura: 2, endAyah: 5, timestamp: date(100))
-
-    let after = try await database.quranDataService.unsyncedItemCount()
-    XCTAssertEqual(before, 0)
-    XCTAssertEqual(after, 1)
-  }
-
-  /// The first value, cancelling the collector afterward so it doesn't keep reading.
-  private func first<Element: Sendable>(
-    _ makeSequence: @escaping @Sendable (MobileSyncDataService) -> MobileSyncAsyncSequence<Element>
-  ) async throws -> Element? {
-    let service = database.quranDataService
-    return try await firstValue { makeSequence(service) }
   }
 
   private func date(_ seconds: TimeInterval) -> Date {
