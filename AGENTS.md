@@ -35,20 +35,14 @@ Use `README.md` as the source of truth for public setup and usage docs.
 
 ## Commands
 
-Run the tests as CI does (`.github/workflows/ci.yml`, macos-26 with Xcode 26.2). The product schemes have no
-test action; `MobileSync-Package` builds and tests every target.
+Run the tests as CI does (`.github/workflows/ci.yml`, macos-26 with Xcode 26.2) with `scripts/test.sh`. It
+picks an iPhone simulator on the runtime that matches the SDK (iOS 26.2 for Xcode 26.2; it boots faster on
+CI than a newer runtime), falling back to any iPhone, and runs `xcodebuild build test` on the
+`MobileSync-Package` scheme, which builds and tests every target (the product schemes have no test action).
+Extra arguments go to `xcodebuild`.
 
 ```bash
-set -o pipefail
-simulator_id="$(
-  xcrun simctl list devices available --json |
-    python3 -c 'import json, sys; print(next(device["udid"] for devices in json.load(sys.stdin)["devices"].values() for device in devices if device.get("isAvailable") and device["name"].startswith("iPhone")))'
-)"
-xcrun xcodebuild \
-  -scheme MobileSync-Package \
-  -sdk iphonesimulator \
-  -destination "platform=iOS Simulator,id=${simulator_id}" \
-  build test
+scripts/test.sh
 ```
 
 Build against a local XCFramework by setting `MOBILE_SYNC_XCFRAMEWORK_PATH`. `Package.swift` then uses
@@ -58,8 +52,8 @@ package's root (it rejects absolute paths). Unset or blank means the remote bina
 ```bash
 # In mobile-sync, checked out next to this repository:
 ./gradlew :umbrella:assembleSharedXCFramework
-# Here (add the xcodebuild arguments above):
-MOBILE_SYNC_XCFRAMEWORK_PATH=../mobile-sync/umbrella/build/XCFrameworks/debug/Shared.xcframework xcrun xcodebuild ...
+# Here:
+MOBILE_SYNC_XCFRAMEWORK_PATH=../mobile-sync/umbrella/build/XCFrameworks/debug/Shared.xcframework scripts/test.sh
 ```
 
 ## Releasing
