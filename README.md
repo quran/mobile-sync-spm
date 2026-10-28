@@ -114,14 +114,14 @@ let warning = Task {
 warning.cancel() // Once the warning is dismissed.
 ```
 
-`syncStatusSequence()` is for a live spinner or error: `MobileSyncStatus` isn't stored, so it is `.idle` after
-launch and has no time while `.syncing`. Between a failed attempt and its retry it is `.retrying`, with the error and
-when the retry starts; a "Sync now" then runs at once. `syncHistorySequence()` yields the newest sync runs (`MobileSyncRun`:
+`syncStatusSequence()` is for a live spinner or error: `MobileSyncStatus` isn't stored, so it is `.idle` after launch
+and has no time while `.syncing`. Between a failed attempt and its retry it is `.retrying`, with the error and when the
+retry starts; a "Sync now" then runs at once. `syncHistorySequence()` yields the newest sync runs (`MobileSyncRun`:
 trigger, result, counts and any `MobileSyncRunError`), `heldItemsSequence()` the items that don't sync
 (`MobileSyncHeldItem`: why, and the held item one waits on as a `MobileSyncHeldItem.Blocker`, which waits on nothing
-itself), and `unsyncedItemsSequence()` the pending and held counts (`MobileSyncUnsyncedItemCounts`) after every
-change. Each keeps its MobileSync collector running until its task is cancelled, so cancel the task to stop observing
-rather than breaking out of the loop.
+itself), and `unsyncedItemsSequence()` the pending and held counts (`MobileSyncUnsyncedItemCounts`) after every change.
+Each keeps its MobileSync collector running until its task is cancelled, so cancel the task to stop observing rather
+than breaking out of the loop.
 
 Signing in, which also syncs the user's data with Quran.com:
 

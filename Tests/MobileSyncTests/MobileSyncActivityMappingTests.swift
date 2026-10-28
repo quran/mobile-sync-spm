@@ -106,7 +106,8 @@ final class MobileSyncActivityMappingTests: XCTestCase {
     XCTAssertEqual(
       MobileSyncStatus(SyncStatus.Retrying(failedAt: date(5), error: error, nextAttemptAt: date(8))),
       .retrying(
-        failedAt: date(5), error: MobileSyncRunError(kind: .network, httpStatus: nil, serverCode: nil, message: "Offline"),
+        failedAt: date(5),
+        error: MobileSyncRunError(kind: .network, httpStatus: nil, serverCode: nil, message: "Offline"),
         nextAttemptAt: date(8)))
     XCTAssertEqual(MobileSyncStatus(SyncStatus.Succeeded(at: date(10))), .succeeded(at: date(10)))
     XCTAssertEqual(
