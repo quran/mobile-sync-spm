@@ -52,6 +52,42 @@ public struct MobileSyncDataService: @unchecked Sendable {
     sequence(asyncSequence(for: service.readingSessions)) { $0.map(MobileSyncReadingSession.init) }
   }
 
+  // MARK: Syncing
+
+  /// The sync status now and after every change. See ``MobileSyncStatus`` for how retries and sign-out show.
+  public func syncStatusSequence() -> MobileSyncAsyncSequence<MobileSyncStatus> {
+    MobileSyncAsyncSequence(
+      asyncSequence(for: service.syncStatusFlow).compactMap(MobileSyncStatus.init),
+      mapError: dataError(bridging:)
+    )
+  }
+
+  /// The newest sync runs first, at most 50, after every change. Sign-out clears them with the rest of the data.
+  public func syncHistorySequence() -> MobileSyncAsyncSequence<[MobileSyncRun]> {
+    sequence(asyncSequence(for: service.syncHistory)) { $0.compactMap(MobileSyncRun.init) }
+  }
+
+  /// The items that don't sync, held ones first, then the ones waiting on them. It changes as soon as an item is
+  /// held or released, without waiting for a sync. Sign-out clears them with the rest of the data.
+  public func heldItemsSequence() -> MobileSyncAsyncSequence<[MobileSyncHeldItem]> {
+    sequence(asyncSequence(for: service.heldItems)) { $0.compactMap(MobileSyncHeldItem.init) }
+  }
+
+  /// How many items have local changes the server doesn't have yet, held items included, after every change.
+  /// Sign-out deletes them, so an app can warn with this count. It may over-count before the first sync.
+  /// Every write re-reads it, so observe it only while it's shown.
+  public func unsyncedItemCountSequence() -> MobileSyncAsyncSequence<Int> {
+    sequence(asyncSequence(for: service.unsyncedItemCount)) { $0.intValue }
+  }
+
+  /// Schedules a sync when the user is signed in.
+  ///
+  /// - Parameter immediately: `false` waits a few seconds so a burst of edits syncs once. `true` starts now, such
+  ///   as for a user's "Sync now"; while a sync runs, another starts right after it.
+  public func triggerSync(immediately: Bool) {
+    service.triggerSync(immediately: immediately)
+  }
+
   // MARK: Importing
 
   /// Merges local data and optionally records handled content so later tracked imports skip it.

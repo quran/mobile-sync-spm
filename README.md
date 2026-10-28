@@ -74,8 +74,9 @@ for try await notes in data.notesSequence() {
 let notes = try await data.notesSequence().first { _ in true } // The current notes.
 ```
 
-Page reading bookmarks take the `MobileSyncMushaf` the app shows: `.madani1405`, `.madani1440` (604 pages each) or
-`.indopak15Lines`, numbered 2…611 as the apps number it (page 1 is the cover). `readingBookmarksSequence(mushaf:)`
+Page reading bookmarks take the `MobileSyncMushaf` the app shows: `.madani1405`, `.madani1440` (604 pages each),
+`.indopak15Lines`, numbered 2…611 as the apps number it (page 1 is the cover), `.shemerly` (521 pages), or the
+riwayat `.warsh` and `.qaloun` (604 pages each), whose pages map to no other mushaf. `readingBookmarksSequence(mushaf:)`
 and `renameReadingBookmark(slot:name:mushaf:)` return page bookmarks as pages of that mushaf, mapped from whichever
 mushaf they were set in, here or on Quran.com; a page it can't show comes back `.unplaced`. Setting a page the
 mushaf doesn't have throws `MobileSyncDataError.invalidArgument`, and importing one skips it.
@@ -87,6 +88,23 @@ data (`importData(_:deleteExisting:trackHistory:)`). Calls that create, add, set
 `MobileSyncTextLengthLimitError`, the collection errors (`MobileSyncReadOnlyCollectionError`,
 `MobileSyncDuplicateCollectionNameError`, `MobileSyncReservedCollectionNameError`) documented on each
 collection write, or `MobileSyncDataError`.
+
+Sync activity, for a "Sync now" button, "Last synced", a sync log, or a sign-out warning:
+
+```swift
+data.triggerSync(immediately: true) // "Sync now". Without a signed-in user, nothing syncs.
+
+for try await status in data.syncStatusSequence() {
+  if case let .succeeded(at) = status {
+    print("Last synced \(at)")
+  }
+}
+```
+
+`syncHistorySequence()` yields the newest sync runs (`MobileSyncRun`: trigger, result, counts and any
+`MobileSyncRunError`), `heldItemsSequence()` the items that don't sync (`MobileSyncHeldItem`: why, and the held item
+one waits on), and `unsyncedItemCountSequence()` how many items have changes the server doesn't have yet, which
+signing out deletes.
 
 Signing in, which also syncs the user's data with Quran.com:
 

@@ -10,6 +10,13 @@ public enum MobileSyncMushaf: Hashable, Sendable {
   case madani1440
   /// The 15-line IndoPak print. Pages are numbered as the apps number them, 2…611, where page 1 is the cover.
   case indopak15Lines
+  /// The Shemerly print, 521 pages.
+  case shemerly
+  /// The Warsh riwayah, 604 pages. Its pages map to no other mushaf: a page set here reads as
+  /// ``MobileSyncReadingBookmark/Placement/unplaced`` in any other.
+  case warsh
+  /// The Qaloun riwayah, 604 pages. Its pages map to no other mushaf, like ``warsh``.
+  case qaloun
 }
 
 // MARK: - Kotlin mapping
@@ -21,6 +28,9 @@ extension MobileSyncMushaf {
     case .madani1405: self = .madani1405
     case .madani1440: self = .madani1440
     case .indopak15Lines: self = .indopak15Lines
+    case .shemerly: self = .shemerly
+    case .warsh: self = .warsh
+    case .qaloun: self = .qaloun
     default: return nil
     }
   }
@@ -30,6 +40,9 @@ extension MobileSyncMushaf {
     case .madani1405: .madani1405
     case .madani1440: .madani1440
     case .indopak15Lines: .indopak15Lines
+    case .shemerly: .shemerly
+    case .warsh: .warsh
+    case .qaloun: .qaloun
     }
   }
 }
