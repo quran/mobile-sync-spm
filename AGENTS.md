@@ -32,6 +32,10 @@ Use `README.md` as the source of truth for public setup and usage docs.
   out of the public API.
 - Never edit `remoteVersion` or `remoteChecksum` just to adopt a mobile-sync release; the Release Wrapper
   does it (see Releasing).
+- The KMP-NativeCoroutines `exact:` version in `Package.swift` must equal `native-coroutines` in mobile-sync's
+  `gradle/libs.versions.toml` at tag `v<remoteVersion>`: the Swift package and the Kotlin plugin are two
+  halves of one library, and a mismatch leaks collectors. The `NativeCoroutines` CI job runs
+  `scripts/check-native-coroutines.sh` to check it; when either side moves, bump both together.
 
 ## Commands
 

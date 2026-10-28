@@ -29,3 +29,14 @@ jobs:
 
       - name: Run tests
         run: scripts/test.sh
+
+  # The Swift package and the Kotlin plugin that builds Shared must be the same KMP-NativeCoroutines version.
+  NativeCoroutines:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Check KMP-NativeCoroutines matches mobile-sync
+        run: scripts/check-native-coroutines.sh
