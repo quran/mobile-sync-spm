@@ -99,6 +99,10 @@ jobs:
           package.write_text(data)
           PY
 
+      # The Swift package must match the Kotlin plugin that built this Shared, so take its version from mobile-sync.
+      - name: Set KMP-NativeCoroutines from mobile-sync
+        run: scripts/check-native-coroutines.sh --update
+
       # Pushes from this workflow use GITHUB_TOKEN and don't trigger CI, so this is the only check a release gets.
       - name: Check KMP-NativeCoroutines matches mobile-sync
         run: scripts/check-native-coroutines.sh

@@ -2,9 +2,20 @@
 # Checks that the KMP-NativeCoroutines Swift package pinned in Package.swift matches the KMP-NativeCoroutines
 # Kotlin plugin (`native-coroutines` in gradle/libs.versions.toml) of the mobile-sync release named by
 # remoteVersion. The two halves of the library must be the same version; a mismatch leaks collectors.
+# With --update, it sets the pin to the Kotlin plugin's version instead of failing, as the Release Wrapper does.
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
+
+update=false
+case "${1-}" in
+  "") ;;
+  --update) update=true ;;
+  *)
+    echo "usage: $0 [--update]" >&2
+    exit 2
+    ;;
+esac
 
 fail() {
   echo "::error::$*"
@@ -49,8 +60,16 @@ if [[ -z "$kotlin_version" ]]; then
   fail "Couldn't read the native-coroutines version from ${toml_url}: expected one 'native-coroutines = \"…\"' line."
 fi
 
+if [[ "$swift_version" != "$kotlin_version" && "$update" == true ]]; then
+  KOTLIN_VERSION="$kotlin_version" perl -0pi -e \
+    's{("https://github\.com/rickclephas/KMP-NativeCoroutines\.git"\s*,\s*exact:\s*")[^"]+"}{$1$ENV{KOTLIN_VERSION}"}' \
+    Package.swift
+  echo "Set KMP-NativeCoroutines from ${swift_version} to ${kotlin_version}, native-coroutines in mobile-sync v${remote_version}."
+  exit 0
+fi
+
 if [[ "$swift_version" != "$kotlin_version" ]]; then
-  fail "KMP-NativeCoroutines mismatch: Package.swift pins the Swift package at ${swift_version}, but mobile-sync v${remote_version} (remoteVersion) builds Shared with the Kotlin plugin at ${kotlin_version}. Change the KMP-NativeCoroutines 'exact:' version in Package.swift to \"${kotlin_version}\"."
+  fail "KMP-NativeCoroutines mismatch: Package.swift pins the Swift package at ${swift_version}, but mobile-sync v${remote_version} (remoteVersion) builds Shared with the Kotlin plugin at ${kotlin_version}. Change the KMP-NativeCoroutines 'exact:' version in Package.swift to \"${kotlin_version}\", or run $0 --update."
 fi
 
 echo "KMP-NativeCoroutines ${swift_version} matches native-coroutines in mobile-sync v${remote_version}."
