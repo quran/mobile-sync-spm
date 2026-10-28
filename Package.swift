@@ -76,6 +76,8 @@ let package = Package(
       dependencies: [
         .target(name: shimTargetName),
         .target(name: testSupportTargetName),
+        .product(name: "KMPNativeCoroutinesAsync", package: "KMP-NativeCoroutines"),
+        .product(name: "KMPNativeCoroutinesCore", package: "KMP-NativeCoroutines"),
       ]
     ),
     // Deleting the database stops the process-wide graph, so this runs in its own test process.
