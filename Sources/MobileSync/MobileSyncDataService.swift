@@ -84,7 +84,7 @@ public struct MobileSyncDataService: @unchecked Sendable {
 
   /// How many items have local changes the server doesn't have yet, after every change: the ones the next sync sends
   /// and the held ones, counted apart from one read. Sign-out deletes them all, so an app can warn with these counts.
-  /// It may over-count pending items before the first sync.
+  /// It may over-count pending items before the first sync and while a sent batch's answer is unknown.
   ///
   /// Every write re-reads it, so observe it only while it's shown, such as a sign-out warning, and cancel the task
   /// to stop observing rather than breaking out of the loop: the collector keeps running until then.
