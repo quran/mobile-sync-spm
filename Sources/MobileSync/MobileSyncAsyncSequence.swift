@@ -2,6 +2,9 @@
 ///
 /// Iterating it runs a MobileSync collector, which stops when the task iterating it is cancelled or the iterator is
 /// dropped, so breaking out of a loop or taking `.first` stops it too.
+///
+/// A cancelled task ends the sequence rather than throwing: the loop ends and `.first` returns `nil`, so check
+/// `Task.isCancelled` after it. Asking again after that throws `CancellationError`.
 public struct MobileSyncAsyncSequence<Element>: AsyncSequence {
   public struct AsyncIterator: AsyncIteratorProtocol {
     init<Sequence: AsyncSequence>(_ sequence: Sequence, mapError: @escaping (Error) -> Error)

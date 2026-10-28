@@ -72,6 +72,8 @@ for try await notes in data.notesSequence() {
   print(notes.map(\.body))
 }
 let notes = try await data.notesSequence().first { _ in true } // The current notes.
+// A cancelled task ends the sequence (`nil`) rather than throwing, so check for it after `.first`.
+try Task.checkCancellation()
 ```
 
 Page reading bookmarks take the `MobileSyncMushaf` the app shows: `.madani1405`, `.madani1440` (604 pages each),
