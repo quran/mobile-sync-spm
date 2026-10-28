@@ -34,8 +34,10 @@ Use `README.md` as the source of truth for public setup and usage docs.
   does it (see Releasing).
 - The KMP-NativeCoroutines `exact:` version in `Package.swift` must equal `native-coroutines` in mobile-sync's
   `gradle/libs.versions.toml` at tag `v<remoteVersion>`: the Swift package and the Kotlin plugin are two
-  halves of one library, and a mismatch leaks collectors. The `NativeCoroutines` CI job runs
-  `scripts/check-native-coroutines.sh` to check it; when either side moves, bump both together.
+  halves of one library, and a mismatch leaks collectors. The Release Wrapper sets it from that file
+  (`scripts/check-native-coroutines.sh --update`), so adopting a mobile-sync release that moves the plugin
+  needs no hand edit either. The `NativeCoroutines` CI job runs `scripts/check-native-coroutines.sh` to check
+  it; don't bump the Swift package on its own.
 
 ## Commands
 
@@ -78,7 +80,9 @@ For example, 0.2.1 was released with `kmp_version=0.1.34` and `package_version=0
 
 The workflow first fails if either input isn't `x.y.z` or if `v<package_version>` already exists. Then it
 downloads `Shared-<kmp_version>.xcframework.zip` from the quran/mobile-sync GitHub release, computes its
-checksum, rewrites `remoteVersion` and `remoteChecksum` in `Package.swift`, builds and runs the tests, then
+checksum, rewrites `remoteVersion` and `remoteChecksum` in `Package.swift`, sets the KMP-NativeCoroutines
+`exact:` version to `native-coroutines` from mobile-sync's `gradle/libs.versions.toml` at `v<kmp_version>` and
+checks it, builds and runs the tests, then
 commits `Release <package_version>` to main and tags `v<package_version>`. Failing tests stop it before
 anything is committed, pushed or tagged.
 
@@ -86,7 +90,8 @@ anything is committed, pushed or tagged.
 
 Open a PR only when the Swift code changes, for example when a Kotlin API change needs new Swift wrappers or
 bridging. That PR also bumps `remoteVersion`/`remoteChecksum` to the mobile-sync release it needs
-(`swift package compute-checksum Shared-<version>.xcframework.zip`). After it merges, run the Release
+(`swift package compute-checksum Shared-<version>.xcframework.zip`) and runs
+`scripts/check-native-coroutines.sh --update` for the matching KMP-NativeCoroutines pin. After it merges, run the Release
 Wrapper with that same `kmp_version`: `Package.swift` is already current, so the release is an empty
 `Release <package_version>` commit plus the tag, as with 0.2.0 after #31 and #33.
 

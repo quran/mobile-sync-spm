@@ -156,8 +156,8 @@ scripts/test.sh
 
 The KMP-NativeCoroutines version pinned in `Package.swift` must match `native-coroutines` in mobile-sync's
 `gradle/libs.versions.toml` at tag `v<remoteVersion>`, since the Swift package and the Kotlin plugin that builds
-`Shared` are two halves of one library. CI checks it with `scripts/check-native-coroutines.sh`, which also runs
-locally; bump both together.
+`Shared` are two halves of one library. The Release Wrapper sets it from that file, and CI checks it with
+`scripts/check-native-coroutines.sh`, which also runs locally (`--update` sets the pin instead of failing).
 
 ### Using a locally built XCFramework
 
@@ -185,7 +185,8 @@ open -a Xcode --env MOBILE_SYNC_XCFRAMEWORK_PATH=../mobile-sync/umbrella/build/X
 
 Releases are made by the **Release Wrapper** workflow ([`.github/workflows/release.yml`](.github/workflows/release.yml)).
 Given a mobile-sync release (`kmp_version`) and this package's next version (`package_version`), it points
-`Package.swift` at that release's XCFramework and checksum, builds and runs the tests, commits
+`Package.swift` at that release's XCFramework and checksum and at the KMP-NativeCoroutines version it was built
+with, builds and runs the tests, commits
 `Release <package_version>` to main and tags `v<package_version>`. It refuses a version that is already tagged:
 
 ```bash
