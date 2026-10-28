@@ -36,9 +36,10 @@ Use `README.md` as the source of truth for public setup and usage docs.
 ## Commands
 
 Run the tests as CI does (`.github/workflows/ci.yml`, macos-26 with Xcode 26.2) with `scripts/test.sh`. It
-boots the first available iPhone simulator and runs `xcodebuild build test` on the `MobileSync-Package`
-scheme, which builds and tests every target (the product schemes have no test action). Extra arguments go
-to `xcodebuild`.
+picks an iPhone simulator on the runtime that matches the SDK (iOS 26.2 for Xcode 26.2; it boots faster on
+CI than a newer runtime), falling back to any iPhone, and runs `xcodebuild build test` on the
+`MobileSync-Package` scheme, which builds and tests every target (the product schemes have no test action).
+Extra arguments go to `xcodebuild`.
 
 ```bash
 scripts/test.sh

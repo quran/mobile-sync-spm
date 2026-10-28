@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Builds and tests every target on an iPhone simulator, as CI and the Release Wrapper do.
-# Extra arguments go to xcodebuild, e.g. -clonedSourcePackagesDirPath <dir>.
+# Extra arguments go to xcodebuild.
 set -euo pipefail
 
 cd "$(dirname "$0")/.."

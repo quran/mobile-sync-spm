@@ -27,13 +27,5 @@ jobs:
       - name: Setting up Xcode
         run: sudo xcode-select -s "/Applications/Xcode_26.2.app"
 
-      # The checkouts of KMP-NativeCoroutines and RxSwift, and the downloaded Shared.xcframework.
-      - name: Cache Swift packages
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: ${{ runner.temp }}/SourcePackages
-          key: spm-${{ runner.os }}-${{ hashFiles('Package.swift') }}
-          restore-keys: spm-${{ runner.os }}-
-
       - name: Run tests
-        run: scripts/test.sh -clonedSourcePackagesDirPath "$RUNNER_TEMP/SourcePackages"
+        run: scripts/test.sh

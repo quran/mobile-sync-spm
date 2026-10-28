@@ -145,7 +145,8 @@ debug builds either call trips an assertion.
 ## Development
 
 Run the tests the way CI does (`.github/workflows/ci.yml`). The product schemes have no test action, so
-`scripts/test.sh` runs the `MobileSync-Package` scheme on the first available iPhone simulator:
+`scripts/test.sh` runs the `MobileSync-Package` scheme on an iPhone simulator, preferring one whose iOS version
+matches the SDK's:
 
 ```bash
 scripts/test.sh
