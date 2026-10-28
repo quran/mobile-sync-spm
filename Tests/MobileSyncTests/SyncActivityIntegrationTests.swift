@@ -39,10 +39,10 @@ final class SyncActivityIntegrationTests: XCTestCase {
     XCTAssertEqual(held, [])
   }
 
-  func testUnsyncedItemCountSequenceCountsANewNote() async throws {
+  func testUnsyncedItemsSequenceCountsANewNoteAsPending() async throws {
     let service = database.quranDataService
-    var counts: [Int] = []
-    for try await count in service.unsyncedItemCountSequence() {
+    var counts: [MobileSyncUnsyncedItemCounts] = []
+    for try await count in service.unsyncedItemsSequence() {
       counts.append(count)
       guard counts.count == 1 else {
         break
@@ -51,7 +51,7 @@ final class SyncActivityIntegrationTests: XCTestCase {
         body: "Reflection", startSura: 2, startAyah: 1, endSura: 2, endAyah: 5, timestamp: Date())
     }
 
-    XCTAssertEqual(counts, [0, 1])
+    XCTAssertEqual(counts, [.init(pending: 0, held: 0), .init(pending: 1, held: 0)])
   }
 
   private func date(_ seconds: TimeInterval) -> Date {

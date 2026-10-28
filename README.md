@@ -93,6 +93,7 @@ Sync activity, for a "Sync now" button, "Last synced", a sync log, or a sign-out
 
 ```swift
 data.triggerSync(immediately: true) // "Sync now". Without a signed-in user, nothing syncs.
+data.syncOnForeground() // On each return from the background (not at launch); the run's trigger is .foreground.
 
 // "Last synced": the newest succeeded run. The history is stored, unlike the status.
 let observation = Task {
@@ -103,21 +104,24 @@ let observation = Task {
 }
 observation.cancel() // Stops observing; cancel the task rather than breaking out of the loop.
 
-// The sign-out warning: how many items have changes the server doesn't have yet, which signing out deletes.
+// The sign-out warning: how many items have changes the server doesn't have yet, which signing out deletes:
+// `pending` ones the next sync sends and `held` ones that don't sync until fixed.
 let warning = Task {
-  for try await unsynced in data.unsyncedItemCountSequence() {
-    print("Signing out deletes \(unsynced) unsynced items")
+  for try await unsynced in data.unsyncedItemsSequence() {
+    print("Signing out deletes \(unsynced.pending + unsynced.held) unsynced items")
   }
 }
 warning.cancel() // Once the warning is dismissed.
 ```
 
 `syncStatusSequence()` is for a live spinner or error: `MobileSyncStatus` isn't stored, so it is `.idle` after
-launch and has no time while `.syncing`. `syncHistorySequence()` yields the newest sync runs (`MobileSyncRun`:
+launch and has no time while `.syncing`. Between a failed attempt and its retry it is `.retrying`, with the error and
+when the retry starts; a "Sync now" then runs at once. `syncHistorySequence()` yields the newest sync runs (`MobileSyncRun`:
 trigger, result, counts and any `MobileSyncRunError`), `heldItemsSequence()` the items that don't sync
 (`MobileSyncHeldItem`: why, and the held item one waits on as a `MobileSyncHeldItem.Blocker`, which waits on nothing
-itself), and `unsyncedItemCountSequence()` the unsynced count after every change. Each keeps its MobileSync collector
-running until its task is cancelled, so cancel the task to stop observing rather than breaking out of the loop.
+itself), and `unsyncedItemsSequence()` the pending and held counts (`MobileSyncUnsyncedItemCounts`) after every
+change. Each keeps its MobileSync collector running until its task is cancelled, so cancel the task to stop observing
+rather than breaking out of the loop.
 
 Signing in, which also syncs the user's data with Quran.com:
 

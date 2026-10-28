@@ -3,13 +3,18 @@ internal import Shared
 
 /// The state of sync in this app session. It isn't persisted, so it starts as ``idle`` on every launch.
 ///
-/// A sync that fails is retried a few times and stays ``syncing`` until it succeeds or gives up. A sync that
-/// ends without syncing, because no one is signed in or a sign-out stopped it, leaves the status as it was.
+/// A sync that fails is retried a few times: it is ``syncing`` while an attempt runs and
+/// ``retrying(failedAt:error:nextAttemptAt:)`` while it waits for the next one, until it succeeds or gives up. A
+/// sync that ends without syncing, because no one is signed in or a sign-out stopped it, leaves the status as it was.
 public enum MobileSyncStatus: Hashable, Sendable {
   /// No sync has finished since launch, or a sign-out cleared the previous result.
   case idle
-  /// A signed-in sync is running or waiting to retry.
+  /// A signed-in sync attempt is running: the first one, or a retry.
   case syncing
+  /// The latest attempt failed at `failedAt` because of `error`, and the sync tries again at `nextAttemptAt` on its
+  /// own, becoming ``syncing``. No attempt is running, so an app can offer "Try again"
+  /// (`triggerSync(immediately: true)`), which runs at once instead of waiting.
+  case retrying(failedAt: Date, error: MobileSyncRunError, nextAttemptAt: Date)
   /// The latest sync finished at `at`.
   case succeeded(at: Date)
   /// The latest sync gave up at `at` after its retries.
@@ -65,6 +70,8 @@ public enum MobileSyncRunTrigger: Hashable, Sendable {
   case appStart
   /// Local data changed, or `triggerSync(immediately: false)`.
   case localChange
+  /// The app came back to the foreground: `syncOnForeground()`.
+  case foreground
   /// The periodic sync came due.
   case periodic
   /// `triggerSync(immediately: true)`, such as a user's "Sync now".
@@ -177,6 +184,21 @@ public struct MobileSyncHeldItem: Hashable, Sendable {
   }
 }
 
+/// The items whose local changes the server doesn't have yet, which sign-out deletes. Both counts come from one read,
+/// and each item is in exactly one of them, so `pending + held` is the total.
+public struct MobileSyncUnsyncedItemCounts: Hashable, Sendable {
+  /// The items the next sync sends: new, edited or deleted since they last synced, and not held.
+  public let pending: Int
+  /// The items that don't sync until they're fixed: exactly the ``MobileSyncDataService/heldItemsSequence()`` items,
+  /// so the held ones and the ones waiting on them.
+  public let held: Int
+
+  public init(pending: Int, held: Int) {
+    self.pending = pending
+    self.held = held
+  }
+}
+
 /// The kinds of synced items.
 public enum MobileSyncResourceType: Hashable, Sendable {
   case note
@@ -228,6 +250,9 @@ extension MobileSyncStatus {
       self = .idle
     case is SyncStatus.Syncing:
       self = .syncing
+    case let status as SyncStatus.Retrying:
+      self = .retrying(
+        failedAt: status.failedAt, error: MobileSyncRunError(status.error), nextAttemptAt: status.nextAttemptAt)
     case let status as SyncStatus.Succeeded:
       self = .succeeded(at: status.at)
     case let status as SyncStatus.Failed:
@@ -265,6 +290,7 @@ extension MobileSyncRunTrigger {
     switch trigger {
     case .appStart: self = .appStart
     case .localChange: self = .localChange
+    case .foreground: self = .foreground
     case .periodic: self = .periodic
     case .manual: self = .manual
     case .signIn: self = .signIn
@@ -332,6 +358,12 @@ extension MobileSyncHeldItem {
       httpStatus: item.httpStatus.map { Int($0.int32Value) },
       serverCode: item.serverCode
     )
+  }
+}
+
+extension MobileSyncUnsyncedItemCounts {
+  init(_ counts: UnsyncedItemCounts) {
+    self.init(pending: Int(counts.pending), held: Int(counts.held))
   }
 }
 

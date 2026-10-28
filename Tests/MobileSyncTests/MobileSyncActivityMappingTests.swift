@@ -9,8 +9,8 @@ final class MobileSyncActivityMappingTests: XCTestCase {
 
   func testMapsEveryKotlinSyncRunTrigger() {
     let triggers: [(SyncRunTrigger, MobileSyncRunTrigger)] = [
-      (.appStart, .appStart), (.localChange, .localChange), (.periodic, .periodic), (.manual, .manual),
-      (.signIn, .signIn),
+      (.appStart, .appStart), (.localChange, .localChange), (.foreground, .foreground), (.periodic, .periodic),
+      (.manual, .manual), (.signIn, .signIn),
     ]
 
     XCTAssertEqual(SyncRunTrigger.entries, triggers.map(\.0))
@@ -103,6 +103,11 @@ final class MobileSyncActivityMappingTests: XCTestCase {
 
     XCTAssertEqual(MobileSyncStatus(SyncStatus.Idle.shared), .idle)
     XCTAssertEqual(MobileSyncStatus(SyncStatus.Syncing.shared), .syncing)
+    XCTAssertEqual(
+      MobileSyncStatus(SyncStatus.Retrying(failedAt: date(5), error: error, nextAttemptAt: date(8))),
+      .retrying(
+        failedAt: date(5), error: MobileSyncRunError(kind: .network, httpStatus: nil, serverCode: nil, message: "Offline"),
+        nextAttemptAt: date(8)))
     XCTAssertEqual(MobileSyncStatus(SyncStatus.Succeeded(at: date(10))), .succeeded(at: date(10)))
     XCTAssertEqual(
       MobileSyncStatus(SyncStatus.Failed(at: date(20), error: error)),
@@ -137,6 +142,12 @@ final class MobileSyncActivityMappingTests: XCTestCase {
         type: .collectionBookmark, id: "2:255", collectionID: "3", reason: .waitingOnParent,
         waitingOn: MobileSyncHeldItem.Blocker(type: .collection, id: "3", collectionID: nil, reason: .tooLong),
         httpStatus: nil, serverCode: nil))
+  }
+
+  func testMapsUnsyncedItemCounts() {
+    XCTAssertEqual(
+      MobileSyncUnsyncedItemCounts(UnsyncedItemCounts(pending: 3, held: 2)),
+      MobileSyncUnsyncedItemCounts(pending: 3, held: 2))
   }
 
   private func date(_ seconds: TimeInterval) -> Date {

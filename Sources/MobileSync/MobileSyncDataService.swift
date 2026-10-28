@@ -82,13 +82,14 @@ public struct MobileSyncDataService: @unchecked Sendable {
     sequence(asyncSequence(for: service.heldItems)) { $0.compactMap(MobileSyncHeldItem.init) }
   }
 
-  /// How many items have local changes the server doesn't have yet, held items included, after every change.
-  /// Sign-out deletes them, so an app can warn with this count. It may over-count before the first sync.
+  /// How many items have local changes the server doesn't have yet, after every change: the ones the next sync sends
+  /// and the held ones, counted apart from one read. Sign-out deletes them all, so an app can warn with these counts.
+  /// It may over-count pending items before the first sync.
   ///
   /// Every write re-reads it, so observe it only while it's shown, such as a sign-out warning, and cancel the task
   /// to stop observing rather than breaking out of the loop: the collector keeps running until then.
-  public func unsyncedItemCountSequence() -> MobileSyncAsyncSequence<Int> {
-    sequence(asyncSequence(for: service.unsyncedItemCount)) { $0.intValue }
+  public func unsyncedItemsSequence() -> MobileSyncAsyncSequence<MobileSyncUnsyncedItemCounts> {
+    sequence(asyncSequence(for: service.unsyncedItems), transform: MobileSyncUnsyncedItemCounts.init)
   }
 
   /// Schedules a sync when the user is signed in.
@@ -97,6 +98,17 @@ public struct MobileSyncDataService: @unchecked Sendable {
   ///   as for a user's "Sync now"; while a sync runs, another starts right after it.
   public func triggerSync(immediately: Bool) {
     service.triggerSync(immediately: immediately)
+  }
+
+  /// Tells sync the app came back to the foreground, so it syncs soon; ``syncHistorySequence()`` records the run as
+  /// ``MobileSyncRunTrigger/foreground``. Call it on each return from the background, not at launch, which has its
+  /// own sync.
+  ///
+  /// Like a local change, the run starts after a few seconds and only pulls while pushes back off after a failure. A
+  /// run already due sooner runs in its place, keeping its own trigger; during a run it runs again after it; while a
+  /// failed run waits to retry, it is dropped. Without a signed-in user, nothing syncs.
+  public func syncOnForeground() {
+    service.syncOnForeground()
   }
 
   // MARK: Importing
