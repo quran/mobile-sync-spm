@@ -66,10 +66,12 @@ _ = try await data.setAyahHighlight(sura: 1, ayah: 1, color: .yellow)
 _ = try await data.setAyahReadingBookmark(slot: .teal, sura: 18, ayah: 10)
 _ = try await data.setPageReadingBookmark(slot: .orange, page: 537, mushaf: .indopak15Lines)
 
-// Each sequence yields the latest values after every change, until its task is cancelled.
+// Each sequence yields the latest values after every change. Cancelling its task, breaking out of the
+// loop or taking `.first` stops it.
 for try await notes in data.notesSequence() {
   print(notes.map(\.body))
 }
+let notes = try await data.notesSequence().first { _ in true } // The current notes.
 ```
 
 Page reading bookmarks take the `MobileSyncMushaf` the app shows: `.madani1405`, `.madani1440` (604 pages each) or
@@ -107,7 +109,7 @@ let observation = Task {
     print(user?.name ?? "No profile")
   }
 }
-observation.cancel() // Stops observing; cancel the task rather than breaking out of the loop.
+observation.cancel() // Stops observing.
 ```
 
 Auth calls throw `MobileSyncAuthenticationError`.
