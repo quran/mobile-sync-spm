@@ -56,8 +56,6 @@ public struct MobileSyncDataService: @unchecked Sendable {
 
   /// The sync status now and after every change, for a live spinner or error. See ``MobileSyncStatus`` for how
   /// retries and sign-out show; it isn't persisted, so take "Last synced" from ``syncHistorySequence()``.
-  ///
-  /// Cancel the task to stop observing rather than breaking out of the loop.
   public func syncStatusSequence() -> MobileSyncAsyncSequence<MobileSyncStatus> {
     MobileSyncAsyncSequence(
       asyncSequence(for: service.syncStatusFlow).compactMap(MobileSyncStatus.init),
@@ -67,8 +65,6 @@ public struct MobileSyncDataService: @unchecked Sendable {
 
   /// The newest sync runs first, at most 50, after every change. Sign-out and an account switch clear them with
   /// the rest of the data.
-  ///
-  /// Cancel the task to stop observing rather than breaking out of the loop: the collector keeps running until then.
   public func syncHistorySequence() -> MobileSyncAsyncSequence<[MobileSyncRun]> {
     sequence(asyncSequence(for: service.syncHistory)) { $0.compactMap(MobileSyncRun.init) }
   }
@@ -76,8 +72,6 @@ public struct MobileSyncDataService: @unchecked Sendable {
   /// The items that don't sync, held ones first, then the ones waiting on them. It changes as soon as an item is
   /// held or released, without waiting for a sync. Sign-out and an account switch clear them with the rest of the
   /// data.
-  ///
-  /// Cancel the task to stop observing rather than breaking out of the loop: the collector keeps running until then.
   public func heldItemsSequence() -> MobileSyncAsyncSequence<[MobileSyncHeldItem]> {
     sequence(asyncSequence(for: service.heldItems)) { $0.compactMap(MobileSyncHeldItem.init) }
   }
@@ -86,8 +80,8 @@ public struct MobileSyncDataService: @unchecked Sendable {
   /// and the held ones, counted apart from one read. Sign-out deletes them all, so an app can warn with these counts.
   /// It may over-count pending items before the first sync and while a sent batch's answer is unknown.
   ///
-  /// Every write re-reads it, so observe it only while it's shown, such as a sign-out warning, and cancel the task
-  /// to stop observing rather than breaking out of the loop: the collector keeps running until then.
+  /// Every write re-reads it, so observe it only while it's shown. For a one-off read, such as a sign-out warning,
+  /// take its first value.
   public func unsyncedItemsSequence() -> MobileSyncAsyncSequence<MobileSyncUnsyncedItemCounts> {
     sequence(asyncSequence(for: service.unsyncedItems), transform: MobileSyncUnsyncedItemCounts.init)
   }

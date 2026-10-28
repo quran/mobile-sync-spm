@@ -104,16 +104,11 @@ let observation = Task {
     print(lastSynced.map { "Last synced \($0)" } ?? "Never synced")
   }
 }
-observation.cancel() // Stops observing; cancel the task rather than breaking out of the loop.
+observation.cancel() // Stops observing.
 
 // The sign-out warning: how many items have changes the server doesn't have yet, which signing out deletes:
 // `pending` ones the next sync sends and `held` ones that don't sync until fixed.
-let warning = Task {
-  for try await unsynced in data.unsyncedItemsSequence() {
-    print("Signing out deletes \(unsynced.pending + unsynced.held) unsynced items")
-  }
-}
-warning.cancel() // Once the warning is dismissed.
+let unsynced = try await data.unsyncedItemsSequence().first { _ in true }
 ```
 
 `syncStatusSequence()` is for a live spinner or error: `MobileSyncStatus` isn't stored, so it is `.idle` after launch
@@ -122,8 +117,6 @@ retry starts; a "Sync now" then runs at once. `syncHistorySequence()` yields the
 trigger, result, counts and any `MobileSyncRunError`), `heldItemsSequence()` the items that don't sync
 (`MobileSyncHeldItem`: why, and the held item one waits on as a `MobileSyncHeldItem.Blocker`, which waits on nothing
 itself), and `unsyncedItemsSequence()` the pending and held counts (`MobileSyncUnsyncedItemCounts`) after every change.
-Each keeps its MobileSync collector running until its task is cancelled, so cancel the task to stop observing rather
-than breaking out of the loop.
 
 Signing in, which also syncs the user's data with Quran.com:
 
