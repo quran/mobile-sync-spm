@@ -51,11 +51,10 @@ extension MobileSyncAsyncSequence {
     }
 
     deinit {
-      // Nothing else can call it once the last owner is gone.
-      nonisolated(unsafe) let nextValue = nextValue
+      let nextValue = LastOwner(nextValue)
       Task {
         withUnsafeCurrentTask { $0?.cancel() }
-        _ = try? await nextValue()
+        _ = try? await nextValue.value()
       }
     }
 
@@ -64,5 +63,15 @@ extension MobileSyncAsyncSequence {
     }
 
     private let nextValue: () async throws -> Element?
+  }
+}
+
+/// Hands a `Collector`'s `nextValue` from its `deinit` to the task that asks once more. The closure isn't `Sendable`,
+/// but the task is its only caller: no other owner is left to call it once `deinit` runs.
+private struct LastOwner<Value>: @unchecked Sendable {
+  let value: Value
+
+  init(_ value: Value) {
+    self.value = value
   }
 }
