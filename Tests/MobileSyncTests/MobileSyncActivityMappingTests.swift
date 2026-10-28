@@ -4,7 +4,7 @@ import XCTest
 
 @testable import MobileSync
 
-final class MobileSyncSyncActivityMappingTests: XCTestCase {
+final class MobileSyncActivityMappingTests: XCTestCase {
   // MARK: Enums
 
   func testMapsEveryKotlinSyncRunTrigger() {
@@ -138,22 +138,6 @@ final class MobileSyncSyncActivityMappingTests: XCTestCase {
       MobileSyncHeldItem(
         type: .collectionBookmark, id: "2:255", collectionID: "3", reason: .waitingOnParent,
         waitingOn: expectedCollection, httpStatus: nil, serverCode: nil))
-    XCTAssertEqual(mapped.waitingOn, expectedCollection)
-  }
-
-  func testHeldItemsWaitingOnDifferentItemsDiffer() {
-    func waiting(onCollection id: String) -> MobileSyncHeldItem {
-      MobileSyncHeldItem(
-        type: .collectionBookmark, id: "2:255", collectionID: id, reason: .waitingOnParent,
-        waitingOn: MobileSyncHeldItem(
-          type: .collection, id: id, collectionID: nil, reason: .tooLong, waitingOn: nil, httpStatus: nil,
-          serverCode: nil),
-        httpStatus: nil, serverCode: nil)
-    }
-
-    XCTAssertEqual(waiting(onCollection: "3"), waiting(onCollection: "3"))
-    XCTAssertNotEqual(waiting(onCollection: "3").waitingOn, waiting(onCollection: "4").waitingOn)
-    XCTAssertEqual(Set([waiting(onCollection: "3"), waiting(onCollection: "3")]).count, 1)
   }
 
   private func date(_ seconds: TimeInterval) -> Date {

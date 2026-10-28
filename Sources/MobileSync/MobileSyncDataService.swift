@@ -54,7 +54,10 @@ public struct MobileSyncDataService: @unchecked Sendable {
 
   // MARK: Syncing
 
-  /// The sync status now and after every change. See ``MobileSyncStatus`` for how retries and sign-out show.
+  /// The sync status now and after every change, for a live spinner or error. See ``MobileSyncStatus`` for how
+  /// retries and sign-out show; it isn't persisted, so take "Last synced" from ``syncHistorySequence()``.
+  ///
+  /// Cancel the task to stop observing rather than breaking out of the loop.
   public func syncStatusSequence() -> MobileSyncAsyncSequence<MobileSyncStatus> {
     MobileSyncAsyncSequence(
       asyncSequence(for: service.syncStatusFlow).compactMap(MobileSyncStatus.init),
@@ -62,22 +65,39 @@ public struct MobileSyncDataService: @unchecked Sendable {
     )
   }
 
-  /// The newest sync runs first, at most 50, after every change. Sign-out clears them with the rest of the data.
+  /// The newest sync runs first, at most 50, after every change. Sign-out and an account switch clear them with
+  /// the rest of the data.
+  ///
+  /// Cancel the task to stop observing rather than breaking out of the loop: the collector keeps running until then.
   public func syncHistorySequence() -> MobileSyncAsyncSequence<[MobileSyncRun]> {
     sequence(asyncSequence(for: service.syncHistory)) { $0.compactMap(MobileSyncRun.init) }
   }
 
   /// The items that don't sync, held ones first, then the ones waiting on them. It changes as soon as an item is
-  /// held or released, without waiting for a sync. Sign-out clears them with the rest of the data.
+  /// held or released, without waiting for a sync. Sign-out and an account switch clear them with the rest of the
+  /// data.
+  ///
+  /// Cancel the task to stop observing rather than breaking out of the loop: the collector keeps running until then.
   public func heldItemsSequence() -> MobileSyncAsyncSequence<[MobileSyncHeldItem]> {
     sequence(asyncSequence(for: service.heldItems)) { $0.compactMap(MobileSyncHeldItem.init) }
   }
 
   /// How many items have local changes the server doesn't have yet, held items included, after every change.
   /// Sign-out deletes them, so an app can warn with this count. It may over-count before the first sync.
-  /// Every write re-reads it, so observe it only while it's shown.
+  ///
+  /// Every write re-reads it, so observe it only while it's shown, and cancel the task to stop observing rather
+  /// than breaking out of the loop: the collector keeps running until then. For a one-off read, such as a sign-out
+  /// warning, use ``unsyncedItemCount()``.
   public func unsyncedItemCountSequence() -> MobileSyncAsyncSequence<Int> {
     sequence(asyncSequence(for: service.unsyncedItemCount)) { $0.intValue }
+  }
+
+  /// How many items have local changes the server doesn't have yet, like ``unsyncedItemCountSequence()``, read once.
+  public func unsyncedItemCount() async throws -> Int {
+    guard let count = try await firstValue(of: { [self] in unsyncedItemCountSequence() }) else {
+      throw MobileSyncDataError.failed(underlying: EndedSequenceError())
+    }
+    return count
   }
 
   /// Schedules a sync when the user is signed in.
@@ -361,6 +381,9 @@ public struct MobileSyncDataService: @unchecked Sendable {
 struct UnknownValueError: Error {
   let type: String
 }
+
+/// A MobileSync sequence that ended without a value.
+struct EndedSequenceError: Error {}
 
 /// A page number too large for MobileSync, so no mushaf has it.
 struct PageOutOfRangeError: Error {

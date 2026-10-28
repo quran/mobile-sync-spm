@@ -11,11 +11,14 @@ public enum MobileSyncMushaf: Hashable, Sendable {
   /// The 15-line IndoPak print. Pages are numbered as the apps number them, 2…611, where page 1 is the cover.
   case indopak15Lines
   /// The Shemerly print, 521 pages.
+  /// Quran.com has no Shemerly mushaf yet, so a page syncs as the ``madani1440`` page holding the same verses.
   case shemerly
   /// The Warsh riwayah, 604 pages. Its pages map to no other mushaf: a page set here reads as
   /// ``MobileSyncReadingBookmark/Placement/unplaced`` in any other.
+  /// Today's Quran.com backend rejects it, so its changes are held (``MobileSyncHeldReason/rejectedByServer``).
   case warsh
   /// The Qaloun riwayah, 604 pages. Its pages map to no other mushaf, like ``warsh``.
+  /// Today's Quran.com backend rejects it, so its changes are held (``MobileSyncHeldReason/rejectedByServer``).
   case qaloun
 }
 

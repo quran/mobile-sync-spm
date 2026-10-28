@@ -20,6 +20,7 @@ public enum MobileSyncStatus: Hashable, Sendable {
 public struct MobileSyncRun: Hashable, Sendable {
   /// When the first attempt began contacting the sync server.
   public let startedAt: Date
+  /// When the run ended: it succeeded, pulled only, failed with no retries left, or was cancelled.
   public let endedAt: Date
   public let trigger: MobileSyncRunTrigger
   public let result: MobileSyncRunResult
@@ -120,8 +121,8 @@ public struct MobileSyncRunError: Hashable, Sendable {
 }
 
 /// A local item that doesn't sync: held because the server would refuse it (or did), or waiting on a held item.
-/// It stays on the device and syncs again once the user edits it into something the server accepts or the hold
-/// expires. It never carries user data or server messages.
+/// It stays on the device and syncs again once the user edits it into something the server accepts, the hold
+/// expires, or an update of MobileSync releases every hold. It never carries user data or server messages.
 public struct MobileSyncHeldItem: Hashable, Sendable {
   public let type: MobileSyncResourceType
   /// The item's id as the other models carry it; for a ``MobileSyncResourceType/collectionBookmark``, its
@@ -139,10 +140,11 @@ public struct MobileSyncHeldItem: Hashable, Sendable {
   /// For ``MobileSyncHeldReason/waitingOnParent`` and ``MobileSyncHeldReason/waitingOnOtherItem``, the held item
   /// it waits on.
   public var waitingOn: MobileSyncHeldItem? {
-    waitingOnBox?.item
+    waitingOnStorage.first
   }
 
-  private let waitingOnBox: HeldItemBox?
+  // At most one item: an array lets the struct hold another of its own type.
+  private let waitingOnStorage: [MobileSyncHeldItem]
 
   public init(
     type: MobileSyncResourceType,
@@ -157,26 +159,9 @@ public struct MobileSyncHeldItem: Hashable, Sendable {
     self.id = id
     self.collectionID = collectionID
     self.reason = reason
-    self.waitingOnBox = waitingOn.map(HeldItemBox.init)
+    self.waitingOnStorage = waitingOn.map { [$0] } ?? []
     self.httpStatus = httpStatus
     self.serverCode = serverCode
-  }
-}
-
-/// Lets ``MobileSyncHeldItem`` hold the item it waits on.
-private final class HeldItemBox: Hashable, Sendable {
-  let item: MobileSyncHeldItem
-
-  init(_ item: MobileSyncHeldItem) {
-    self.item = item
-  }
-
-  static func == (lhs: HeldItemBox, rhs: HeldItemBox) -> Bool {
-    lhs.item == rhs.item
-  }
-
-  func hash(into hasher: inout Hasher) {
-    hasher.combine(item)
   }
 }
 
@@ -236,6 +221,7 @@ extension MobileSyncStatus {
     case let status as SyncStatus.Failed:
       self = .failed(at: status.at, error: MobileSyncRunError(status.error))
     default:
+      // A status this package doesn't know yet is dropped, so the sequence keeps showing the previous one.
       return nil
     }
   }

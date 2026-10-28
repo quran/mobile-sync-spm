@@ -94,17 +94,25 @@ Sync activity, for a "Sync now" button, "Last synced", a sync log, or a sign-out
 ```swift
 data.triggerSync(immediately: true) // "Sync now". Without a signed-in user, nothing syncs.
 
-for try await status in data.syncStatusSequence() {
-  if case let .succeeded(at) = status {
-    print("Last synced \(at)")
+// "Last synced": the newest succeeded run. The history is stored, unlike the status.
+let observation = Task {
+  for try await runs in data.syncHistorySequence() {
+    let lastSynced = runs.first { $0.result == .succeeded }?.endedAt
+    print(lastSynced.map { "Last synced \($0)" } ?? "Never synced")
   }
 }
+observation.cancel() // Stops observing; cancel the task rather than breaking out of the loop.
+
+// The sign-out warning: how many items have changes the server doesn't have yet, which signing out deletes.
+let unsynced = try await data.unsyncedItemCount()
 ```
 
-`syncHistorySequence()` yields the newest sync runs (`MobileSyncRun`: trigger, result, counts and any
-`MobileSyncRunError`), `heldItemsSequence()` the items that don't sync (`MobileSyncHeldItem`: why, and the held item
-one waits on), and `unsyncedItemCountSequence()` how many items have changes the server doesn't have yet, which
-signing out deletes.
+`syncStatusSequence()` is for a live spinner or error: `MobileSyncStatus` isn't stored, so it is `.idle` after
+launch and has no time while `.syncing`. `syncHistorySequence()` yields the newest sync runs (`MobileSyncRun`:
+trigger, result, counts and any `MobileSyncRunError`), `heldItemsSequence()` the items that don't sync
+(`MobileSyncHeldItem`: why, and the held item one waits on), and `unsyncedItemCountSequence()` the unsynced count
+after every change. Each keeps its MobileSync collector running until its task is cancelled, so cancel the task to
+stop observing rather than breaking out of the loop.
 
 Signing in, which also syncs the user's data with Quran.com:
 
