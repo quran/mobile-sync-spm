@@ -42,7 +42,7 @@ public struct MobileSyncAuthService: @unchecked Sendable {
   }
 
   /// Signs out and clears local data.
-  public func signOut() async throws(MobileSyncAuthenticationError) {
+  public func logout() async throws(MobileSyncAuthenticationError) {
     do {
       _ = try await asyncFunction(for: service.logout(clearLocalData: true))
     } catch {

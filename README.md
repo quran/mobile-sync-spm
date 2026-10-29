@@ -129,7 +129,7 @@ if try await !auth.refreshAuthentication() {
 }
 let headers = try await auth.authenticationHeaders() // For your own Quran.com requests.
 
-try await auth.signOut() // Also clears local data.
+try await auth.logout() // Also clears local data.
 
 // Yields the signed-in user now and after every change, such as a token refresh that updates the
 // profile. nil means no profile: signed out, signing in, or a session stored before MobileSync kept the

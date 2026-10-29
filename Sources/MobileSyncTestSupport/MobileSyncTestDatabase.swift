@@ -19,7 +19,7 @@ public final class MobileSyncTestDatabase: Sendable {
 
   /// Signs out, which clears user data but keeps tracked import history.
   public func reset() async throws {
-    try await authService.signOut()
+    try await authService.logout()
   }
 
   package let databaseName = "mobile-sync-tests-\(UUID().uuidString).db"
