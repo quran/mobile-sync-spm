@@ -89,7 +89,8 @@ public struct MobileSyncDataService: @unchecked Sendable {
   /// Schedules a sync when the user is signed in.
   ///
   /// - Parameter immediately: `false` waits a few seconds so a burst of edits syncs once. `true` starts now, such
-  ///   as for a user's "Sync now"; while a sync runs, another starts right after it.
+  ///   as for a user's "Sync now"; while a sync runs, another starts right after it. It also fetches the user's
+  ///   profile at once (see ``refreshProfile()``), in the background, so the sync never waits for it.
   public func triggerSync(immediately: Bool) {
     service.triggerSync(immediately: immediately)
   }
@@ -111,7 +112,8 @@ public struct MobileSyncDataService: @unchecked Sendable {
   /// ``MobileSyncAuthService/loggedInUserUpdates``. Call it when the user may have just edited their profile, such as
   /// when a Quran.com account page the app opened closes. A call while a fetch runs joins it.
   ///
-  /// MobileSync also fetches the profile on its own: during the sign-in's sync, and about once a day during a sync.
+  /// MobileSync also fetches the profile on its own: during the sign-in's sync, about once a day during a sync, and at
+  /// once during a manual sync (``triggerSync(immediately:)`` with `true`, such as "Sync now").
   /// Without a signed-in user, or while signing out, it returns without a request. A failure keeps the user and the
   /// session.
   ///

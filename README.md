@@ -145,7 +145,8 @@ observation.cancel() // Stops observing.
 try await data.refreshProfile()
 ```
 
-MobileSync fetches the user's Quran.com profile during the sign-in's sync and about once a day during a sync, so
+MobileSync fetches the user's Quran.com profile during the sign-in's sync, about once a day during a sync, and at once
+during a manual sync ("Sync now", `triggerSync(immediately: true)`; the sync doesn't wait for it), so
 `loggedInUserUpdates` follows a name or photo changed on the web. `refreshProfile()` fetches it now; it does
 nothing without a signed-in user, and throws `MobileSyncDataError` when the fetch fails, which keeps the user and the
 session.
