@@ -42,12 +42,17 @@ final class AuthServiceIntegrationTests: XCTestCase {
     XCTAssertEqual(users.first, .some(nil))
   }
 
-  func testRefreshProfileWithoutASignedInUserLeavesNoUser() async throws {
-    // Reaches MobileSync, which fetches nothing without a session.
+  func testRefreshProfileWithoutASignedInUserReachesMobileSyncAndLeavesNoUser() async throws {
+    // Without a session MobileSync's profile fetch makes no request; it says why at debug level, which shows the call
+    // reached it.
+    let logs = LogRecorder()
+    MobileSyncLogging.configure(sink: logs, minSeverity: .debug)
+    defer { MobileSyncLogging.configure(sink: LogRecorder(), minSeverity: .warn) }
+
     try await database.quranDataService.refreshProfile()
 
+    XCTAssertTrue(logs.tags.contains("ProfileRefresher"), "\(logs.tags)")
     let user = try await database.authService.loggedInUserUpdates.first { _ in true }
-
     XCTAssertEqual(user, .some(nil))
   }
 
@@ -77,4 +82,18 @@ final class AuthServiceIntegrationTests: XCTestCase {
       error == nil || error is CancellationError,
       "Expected the sequence to end or throw CancellationError, got \(String(describing: error))")
   }
+}
+
+/// Keeps the tags of the logs it receives.
+private final class LogRecorder: MobileSyncLogSink, @unchecked Sendable {
+  var tags: [String] {
+    lock.withLock { recorded }
+  }
+
+  func log(severity: MobileSyncLogSeverity, tag: String, message: String) {
+    lock.withLock { recorded.append(tag) }
+  }
+
+  private let lock = NSLock()
+  private var recorded: [String] = []
 }
