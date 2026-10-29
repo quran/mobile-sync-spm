@@ -125,7 +125,7 @@ let auth = graph.authService
 
 // Restores the stored session; returns whether the user is signed in.
 if try await !auth.refreshAuthentication() {
-  try await auth.signInWithReauthentication()
+  try await auth.login() // Always asks for the user's credentials again.
 }
 let headers = try await auth.authenticationHeaders() // For your own Quran.com requests.
 
