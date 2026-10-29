@@ -42,6 +42,15 @@ final class AuthServiceIntegrationTests: XCTestCase {
     XCTAssertEqual(users.first, .some(nil))
   }
 
+  func testRefreshProfileWithoutASignedInUserLeavesNoUser() async throws {
+    // Reaches MobileSync, which fetches nothing without a session.
+    try await database.quranDataService.refreshProfile()
+
+    let user = try await database.authService.loggedInUserUpdates.first { _ in true }
+
+    XCTAssertEqual(user, .some(nil))
+  }
+
   func testLoggedInUserUpdatesEndWhenTheirTaskIsCancelled() async throws {
     let signedOut = expectation(description: "Yielded signed out")
     let ended = expectation(description: "Ended")

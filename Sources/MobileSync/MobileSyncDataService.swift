@@ -105,6 +105,22 @@ public struct MobileSyncDataService: @unchecked Sendable {
     service.syncOnForeground()
   }
 
+  // MARK: Profile
+
+  /// Fetches the signed-in user's profile from Quran.com now, so a name or photo changed there reaches
+  /// ``MobileSyncAuthService/loggedInUserUpdates``. Call it when the user may have just edited their profile, such as
+  /// when a Quran.com account page the app opened closes. A call while a fetch runs joins it.
+  ///
+  /// MobileSync also fetches the profile on its own: during the sign-in's sync, and about once a day during a sync.
+  /// Without a signed-in user, or while signing out, it returns without a request. A failure keeps the user and the
+  /// session.
+  ///
+  /// - Throws: `CancellationError`, or ``MobileSyncDataError`` when the fetch failed: no network, an error status, or
+  ///   a response that isn't a profile.
+  public func refreshProfile() async throws {
+    _ = try await bridgingDataErrors { try await asyncFunction(for: service.refreshProfile()) }
+  }
+
   // MARK: Importing
 
   /// Merges local data and optionally records handled content so later tracked imports skip it.

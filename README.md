@@ -131,16 +131,24 @@ let headers = try await auth.authenticationHeaders() // For your own Quran.com r
 
 try await auth.logout() // Also clears local data.
 
-// Yields the signed-in user now and after every change, such as a token refresh that updates the
-// profile. nil means no profile: signed out, signing in, or a session stored before MobileSync kept the
-// profile; check `auth.isLoggedIn` to tell them apart.
+// Yields the signed-in user now and after every change, such as a name or photo changed on Quran.com or a
+// token refresh that updates the profile. nil means no profile: signed out, signing in, or a session stored
+// before MobileSync kept the profile; check `auth.isLoggedIn` to tell them apart.
 let observation = Task {
   for try await user in auth.loggedInUserUpdates {
     print(user?.name ?? "No profile")
   }
 }
 observation.cancel() // Stops observing.
+
+// After the user may have edited their profile on Quran.com, such as when the account page you opened closes:
+try await data.refreshProfile()
 ```
+
+MobileSync fetches the user's Quran.com profile during the sign-in's sync and about once a day during a sync, so
+`loggedInUserUpdates` follows a name or photo changed on the web. `refreshProfile()` fetches it now; it does
+nothing without a signed-in user, and throws `MobileSyncDataError` when the fetch fails, which keeps the user and the
+session.
 
 Auth calls throw `MobileSyncAuthenticationError`.
 
