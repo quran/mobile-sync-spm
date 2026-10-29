@@ -15,7 +15,8 @@ public struct MobileSyncAuthService: @unchecked Sendable {
     service.isLoggedIn()
   }
 
-  /// The signed-in user now and after every change, such as a token refresh that updates the profile.
+  /// The signed-in user now and after every change, such as a name or photo changed on Quran.com that MobileSync
+  /// fetched (see ``MobileSyncDataService/refreshProfile()``) or a token refresh that updates the profile.
   ///
   /// It yields the current user first, then each change, skipping repeats, so signing in from signed out
   /// yields only the new user. The user is nil when signed out, while a sign-in is in progress, or for a

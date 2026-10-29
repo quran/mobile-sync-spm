@@ -89,7 +89,8 @@ public struct MobileSyncDataService: @unchecked Sendable {
   /// Schedules a sync when the user is signed in.
   ///
   /// - Parameter immediately: `false` waits a few seconds so a burst of edits syncs once. `true` starts now, such
-  ///   as for a user's "Sync now"; while a sync runs, another starts right after it.
+  ///   as for a user's "Sync now"; while a sync runs, another starts right after it. It also fetches the user's
+  ///   profile at once (see ``refreshProfile()``), in the background, so the sync never waits for it.
   public func triggerSync(immediately: Bool) {
     service.triggerSync(immediately: immediately)
   }
@@ -103,6 +104,23 @@ public struct MobileSyncDataService: @unchecked Sendable {
   /// failed run waits to retry, it is dropped. Without a signed-in user, nothing syncs.
   public func syncOnForeground() {
     service.syncOnForeground()
+  }
+
+  // MARK: Profile
+
+  /// Fetches the signed-in user's profile from Quran.com now, so a name or photo changed there reaches
+  /// ``MobileSyncAuthService/loggedInUserUpdates``. Call it when the user may have just edited their profile, such as
+  /// when a Quran.com account page the app opened closes. A call while a fetch runs joins it.
+  ///
+  /// MobileSync also fetches the profile on its own: during the sign-in's sync, about once a day during a sync, and at
+  /// once during a manual sync (``triggerSync(immediately:)`` with `true`, such as "Sync now").
+  /// Without a signed-in user, or while signing out, it returns without a request. A failure keeps the user and the
+  /// session.
+  ///
+  /// - Throws: `CancellationError`, or ``MobileSyncDataError`` when the fetch failed: no network, an error status, or
+  ///   a response that isn't a profile.
+  public func refreshProfile() async throws {
+    _ = try await bridgingDataErrors { try await asyncFunction(for: service.refreshProfile()) }
   }
 
   // MARK: Importing
