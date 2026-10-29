@@ -114,7 +114,7 @@ final class DataServiceIntegrationTests: XCTestCase {
     let refreshed = try await auth.refreshAuthentication()
     XCTAssertFalse(refreshed)
     do {
-      try await auth.signInWithReauthentication()
+      try await auth.login()
       XCTFail("Expected sign-in to fail without credentials")
     } catch MobileSyncAuthenticationError.authenticationFailed {}
   }

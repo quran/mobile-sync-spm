@@ -32,17 +32,17 @@ public struct MobileSyncAuthService: @unchecked Sendable {
     )
   }
 
-  /// Signs in, asking the identity provider to authenticate the user again.
-  public func signInWithReauthentication() async throws(MobileSyncAuthenticationError) {
+  /// Signs in, always asking the identity provider to authenticate the user again (`prompt=login`).
+  public func login() async throws(MobileSyncAuthenticationError) {
     do {
-      _ = try await asyncFunction(for: service.loginWithReauthentication())
+      _ = try await asyncFunction(for: service.login())
     } catch {
       throw MobileSyncAuthenticationError(bridgedError: error)
     }
   }
 
   /// Signs out and clears local data.
-  public func signOut() async throws(MobileSyncAuthenticationError) {
+  public func logout() async throws(MobileSyncAuthenticationError) {
     do {
       _ = try await asyncFunction(for: service.logout(clearLocalData: true))
     } catch {
