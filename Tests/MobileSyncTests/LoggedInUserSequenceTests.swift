@@ -18,6 +18,20 @@ final class LoggedInUserSequenceTests: XCTestCase {
     XCTAssertEqual(users, [nil, user(name: "Ali"), nil, user(name: "Ali"), nil])
   }
 
+  func testSkipsRestoringUntilTheStoredSessionIsRead() async throws {
+    let signedIn = try await loggedInUsers([
+      AuthState.Restoring.shared,
+      AuthState.Success(userInfo: userInfo(name: "Ali")),
+    ])
+    let signedOut = try await loggedInUsers([
+      AuthState.Restoring.shared,
+      AuthState.Idle.shared,
+    ])
+
+    XCTAssertEqual(signedIn, [user(name: "Ali")])
+    XCTAssertEqual(signedOut, [nil])
+  }
+
   func testYieldsProfileChanges() async throws {
     let users = try await loggedInUsers([
       AuthState.Success(userInfo: userInfo(name: "Ali")),

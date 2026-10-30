@@ -11,6 +11,8 @@ public struct MobileSyncAuthService: @unchecked Sendable {
     self.service = service
   }
 
+  /// Whether a session is published now. It is false until MobileSync has read the stored session at launch;
+  /// ``loggedInUserUpdates`` waits for that answer.
   public var isLoggedIn: Bool {
     service.isLoggedIn()
   }
@@ -19,8 +21,10 @@ public struct MobileSyncAuthService: @unchecked Sendable {
   /// fetched (see ``MobileSyncDataService/refreshProfile()``) or a token refresh that updates the profile.
   ///
   /// It yields the current user first, then each change, skipping repeats, so signing in from signed out
-  /// yields only the new user. The user is nil when signed out, while a sign-in is in progress, or for a
-  /// session stored before MobileSync kept the profile, until its next token refresh; check
+  /// yields only the new user. At launch the first user waits until MobileSync has read the stored session from
+  /// local storage, without waiting on the network: a stored session is yielded before its tokens are refreshed
+  /// and stays signed in when that refresh fails offline. The user is nil when signed out, while a sign-in is in
+  /// progress, or for a session stored before MobileSync kept the profile, until its next token refresh; check
   /// ``isLoggedIn`` to tell those apart.
   ///
   /// Cancelling its task, breaking out of the loop or taking `.first` stops observing. A cancelled task ends the
@@ -51,7 +55,10 @@ public struct MobileSyncAuthService: @unchecked Sendable {
     }
   }
 
-  /// Restores the stored session, refreshing its tokens if needed.
+  /// Refreshes the session's tokens if needed, first publishing the stored session from local storage when
+  /// MobileSync hasn't yet. ``loggedInUserUpdates`` doesn't wait for it: the stored session is published before
+  /// the refresh reaches the network. A refused refresh token signs the user out; a transient failure (offline)
+  /// keeps the session and throws.
   /// - Returns: Whether the user is signed in.
   public func refreshAuthentication() async throws(MobileSyncAuthenticationError) -> Bool {
     do {
@@ -83,7 +90,7 @@ private func authenticationError(bridging error: Error) -> Error {
   return MobileSyncAuthenticationError(bridgedError: error)
 }
 
-/// The signed-in user each auth state publishes, without repeats.
+/// The signed-in user each auth state publishes, without repeats, skipping the launch's `Restoring`.
 struct LoggedInUserSequence<States: AsyncSequence>: AsyncSequence where States.Element == AuthState {
   typealias Element = MobileSyncUser?
 
@@ -94,6 +101,10 @@ struct LoggedInUserSequence<States: AsyncSequence>: AsyncSequence where States.E
 
     mutating func next() async throws -> MobileSyncUser?? {
       while let state = try await states.next() {
+        // Restoring is not an answer yet: the stored session hasn't been read.
+        if state is AuthState.Restoring {
+          continue
+        }
         // Success carries the session's user; Idle, Loading and Error have no session.
         let user = (state as? AuthState.Success)?.userInfo.map(MobileSyncUser.init)
         if let yielded, yielded == user {
