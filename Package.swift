@@ -10,8 +10,8 @@ let testSupportTargetName = "MobileSyncTestSupport"
 
 let localBinaryPath = ProcessInfo.processInfo.environment["MOBILE_SYNC_XCFRAMEWORK_PATH"]?
   .trimmingCharacters(in: .whitespacesAndNewlines)
-let remoteVersion = "0.1.46"
-let remoteChecksum = "d2b08a3415f15e9baa979604d64af3d424f5b756f83825e31a31b38b16fc1ea9"
+let remoteVersion = "0.1.47"
+let remoteChecksum = "e35c63551ffa9a0e287ab95657c666a64a16d4cba4ae5cdaf164740b83ac460c"
 
 let binaryTarget: Target = {
   if let localBinaryPath, !localBinaryPath.isEmpty {
