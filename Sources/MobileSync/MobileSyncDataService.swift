@@ -351,7 +351,8 @@ public struct MobileSyncDataService: @unchecked Sendable {
   }
 
   /// Moves a reading session. The result is authoritative: when another session is already at the
-  /// destination, the two merge under that session's ID.
+  /// destination, the two merge under that session's ID. When the session is gone (a sync, the prune,
+  /// a delete or a reset removed it), it records a visit at the verse instead. Adopt the returned ID.
   public func updateReadingSession(id: String, sura: Int, ayah: Int, timestamp: Date = Date()) async throws
     -> MobileSyncReadingSession
   {
