@@ -183,7 +183,8 @@ public struct MobileSyncDataService: @unchecked Sendable {
 
   // MARK: Collections
 
-  /// - Throws: ``MobileSyncReservedCollectionNameError`` when the name is reserved.
+  /// - Throws: ``MobileSyncReservedCollectionNameError`` when the name is reserved, and
+  ///   ``MobileSyncDuplicateCollectionNameError`` when another collection has the name.
   public func createCollection(named name: String, timestamp: Date = Date()) async throws
     -> MobileSyncCollection
   {
