@@ -16,6 +16,16 @@ final class CollectionErrorIntegrationTests: XCTestCase {
     try await super.tearDown()
   }
 
+  func testCreateCollectionThrowsDuplicateNameErrorAndKeepsCollections() async throws {
+    _ = try await database.quranDataService.createCollection(named: "Study")
+
+    await assertThrows(\MobileSyncDuplicateCollectionNameError.name, "Study") {
+      _ = try await self.database.quranDataService.createCollection(named: " study ")
+    }
+    let names = try await storedCollections().map(\.collection.name)
+    XCTAssertEqual(names.filter { $0.lowercased() == "study" }, ["Study"])
+  }
+
   func testUpdateCollectionThrowsDuplicateNameErrorAndKeepsName() async throws {
     _ = try await database.quranDataService.createCollection(named: "Study")
     let collection = try await database.quranDataService.createCollection(named: "Review")
