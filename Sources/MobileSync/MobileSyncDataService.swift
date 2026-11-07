@@ -106,7 +106,8 @@ public struct MobileSyncDataService: @unchecked Sendable {
   /// already show the result.
   ///
   /// - Throws: `CancellationError` when the task is cancelled, which stops only the wait: the sync goes on. Or
-  ///   ``MobileSyncDataError`` for a result this package doesn't know yet.
+  ///   ``MobileSyncDataError``, usually ``MobileSyncDataError/failed(underlying:)``, when MobileSync couldn't finish a
+  ///   sign-out the previous launch left unfinished, or for a result this package doesn't know yet.
   public func syncNow() async throws -> MobileSyncNowResult {
     let result = try await bridgingDataErrors { try await asyncFunction(for: service.syncNow()) }
     return try known(MobileSyncNowResult(result))

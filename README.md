@@ -119,9 +119,12 @@ let unsynced = try await data.unsyncedItemsSequence().first { _ in true }
 `syncStatusSequence()` is for a live spinner or error: `MobileSyncStatus` isn't stored, so it is `.idle` after launch
 and has no time while `.syncing`. Between a failed attempt and its retry it is `.retrying`, with the error and when the
 retry starts; a "Sync now" then runs at once. `syncNow()` runs that sync and returns a `MobileSyncNowResult` once the
-user can stop waiting: `.ended` with the run (as the history records it), `.retrying` when its attempt failed and the
-run waits to retry (offline, say), `.signedOut` without a signed-in user, or `.unavailable` while signing out. A sync
-already running finishes first, and the one after it is the one waited for; cancelling the task stops only the wait.
+user can stop waiting: `.ended` with the run (as the history records it; it always pushes, so never `.pulledOnly`),
+`.retrying` when its attempt failed and the run waits to retry (offline, say), `.signedOut` without a signed-in user, or
+`.unavailable` while signing out or when MobileSync stopped before the run started, including while it finished an
+earlier sign-out at launch (stopping during the run ends it `.cancelled`). A sync already running finishes first, and the one after it is the one waited for; cancelling the task
+stops only the wait. It throws `MobileSyncDataError` when MobileSync couldn't finish a sign-out the previous launch left
+unfinished.
 `syncHistorySequence()` yields the newest sync runs (`MobileSyncRun`:
 trigger, result, counts and any `MobileSyncRunError`), `heldItemsSequence()` the items that don't sync
 (`MobileSyncHeldItem`: why, and the held item one waits on as a `MobileSyncHeldItem.Blocker`, which waits on nothing

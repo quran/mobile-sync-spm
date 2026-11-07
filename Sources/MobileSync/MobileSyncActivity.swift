@@ -31,8 +31,9 @@ public enum MobileSyncStatus: Hashable, Sendable {
 /// pull-to-refresh or a "Sync now" spinner waits for. By the time it's returned,
 /// ``MobileSyncDataService/syncStatusSequence()`` and ``MobileSyncDataService/syncHistorySequence()`` show it too.
 public enum MobileSyncNowResult: Hashable, Sendable {
-  /// The run ended as the run says: it succeeded, pulled only, failed with no retries left (``MobileSyncRun/error``
-  /// says why), or was cancelled. It's the run ``MobileSyncDataService/syncHistorySequence()`` lists.
+  /// The run ended as the run says: it succeeded, failed with no retries left (``MobileSyncRun/error`` says why), or
+  /// was cancelled. It never only pulls: this run pushes even while pushes back off. It's the run
+  /// ``MobileSyncDataService/syncHistorySequence()`` lists.
   case ended(MobileSyncRun)
   /// The run's attempt failed at `failedAt` because of `error`, and the run tries again on its own at
   /// `nextAttemptAt`, as ``MobileSyncStatus/retrying(failedAt:error:nextAttemptAt:)`` shows. The caller isn't held
@@ -41,11 +42,12 @@ public enum MobileSyncNowResult: Hashable, Sendable {
   /// Like the status, it can tell of a retry that never comes: when a "Sync now" arrived while the failed attempt ran,
   /// that sync runs right after it instead.
   case retrying(failedAt: Date, error: MobileSyncRunError, nextAttemptAt: Date)
-  /// Nothing synced: no one is signed in, or the session ended before the run reached the server. Nothing was
-  /// recorded.
+  /// Nothing synced: no one is signed in, the signed-in account is unknown, or the session ended before the run
+  /// reached the server. Nothing was recorded.
   case signedOut
   /// Sync can't run now: a sign-out is running or began during the run (which deletes what it did), or MobileSync
-  /// stopped before the run started. Nothing was recorded.
+  /// stopped before the run started, including while it finished an earlier sign-out at launch. Nothing was recorded.
+  /// MobileSync stopping during the run ends it instead: ``ended(_:)`` with a ``MobileSyncRunResult/cancelled`` run.
   case unavailable
 }
 
