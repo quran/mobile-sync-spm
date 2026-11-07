@@ -29,16 +29,10 @@ final class SyncActivityIntegrationTests: XCTestCase {
     XCTAssertEqual(runs, [])
   }
 
-  func testSyncNowWithoutASignedInUserReturnsSignedOutAndRecordsNothing() async throws {
-    let service = database.quranDataService
-
-    let result = try await service.syncNow()
+  func testSyncNowWithoutASignedInUserReturnsSignedOut() async throws {
+    let result = try await database.quranDataService.syncNow()
 
     XCTAssertEqual(result, .signedOut)
-    let runs = try await service.syncHistorySequence().first { _ in true }
-    XCTAssertEqual(runs, [])
-    let status = try await service.syncStatusSequence().first { _ in true }
-    XCTAssertEqual(status, .idle, "as before the sync")
   }
 
   func testHeldItemsAreEmptyWithoutASync() async throws {

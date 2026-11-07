@@ -96,7 +96,7 @@ Sync activity, for a "Sync now" button, "Last synced", a sync log, or a sign-out
 ```swift
 data.triggerSync(immediately: true) // "Sync now". Without a signed-in user, nothing syncs.
 
-// Pull-to-refresh (in `.refreshable`): the same sync, waited for until it ends or waits to retry.
+// Pull-to-refresh (in `.refreshable`): the same sync, waited for.
 if case .ended(let run) = try await data.syncNow(), run.result == .failed {
   print("Sync failed: \(run.error?.message ?? "")")
 }
@@ -118,14 +118,9 @@ let unsynced = try await data.unsyncedItemsSequence().first { _ in true }
 
 `syncStatusSequence()` is for a live spinner or error: `MobileSyncStatus` isn't stored, so it is `.idle` after launch
 and has no time while `.syncing`. Between a failed attempt and its retry it is `.retrying`, with the error and when the
-retry starts; a "Sync now" then runs at once. `syncNow()` runs that sync and returns a `MobileSyncNowResult` once the
-user can stop waiting: `.ended` with the run (as the history records it; it always pushes, so never `.pulledOnly`),
-`.retrying` when its attempt failed and the run waits to retry (offline, say), `.signedOut` without a signed-in user, or
-`.unavailable` while signing out or when MobileSync stopped before the run started, including while it finished an
-earlier sign-out at launch (stopping during the run ends it `.cancelled`). A sync already running finishes first, and the one after it is the one waited for; cancelling the task
-stops only the wait. It throws `MobileSyncDataError` when MobileSync couldn't finish a sign-out the previous launch left
-unfinished.
-`syncHistorySequence()` yields the newest sync runs (`MobileSyncRun`:
+retry starts; a "Sync now" then runs at once. `syncNow()` runs that sync and waits for it (a sync already running
+finishes first; calls made before the next one starts share it), returning a `MobileSyncNowResult`: `.ended`,
+`.retrying`, `.signedOut` or `.unavailable`. Cancelling the task stops only the wait. `syncHistorySequence()` yields the newest sync runs (`MobileSyncRun`:
 trigger, result, counts and any `MobileSyncRunError`), `heldItemsSequence()` the items that don't sync
 (`MobileSyncHeldItem`: why, and the held item one waits on as a `MobileSyncHeldItem.Blocker`, which waits on nothing
 itself), and `unsyncedItemsSequence()` the pending and held counts (`MobileSyncUnsyncedItemCounts`) after every change.

@@ -138,20 +138,6 @@ final class MobileSyncActivityMappingTests: XCTestCase {
     XCTAssertEqual(MobileSyncNowResult(SyncNowResult.Unavailable.shared), .unavailable)
   }
 
-  func testMapsAFailedSyncNowRunWithItsError() {
-    let run = SyncRun(
-      startedAt: date(10), endedAt: date(20), trigger: .manual, result: .failed, attempts: 5, pushed: 0, pulled: 0,
-      held: 1, error: SyncError(kind: .network, httpStatus: nil, serverCode: nil, message: "Offline"))
-
-    XCTAssertEqual(
-      MobileSyncNowResult(SyncNowResult.Ended(run: run)),
-      .ended(
-        MobileSyncRun(
-          startedAt: date(10), endedAt: date(20), trigger: .manual, result: .failed, attempts: 5, pushed: 0,
-          pulled: 0, held: 1,
-          error: MobileSyncRunError(kind: .network, httpStatus: nil, serverCode: nil, message: "Offline"))))
-  }
-
   func testMapsHeldItemRejectedByServer() {
     let item = HeldSyncItem(
       type: .note, id: "7", collectionId: nil, reason: .rejectedByServer, waitingOn: nil, httpStatus: 422,

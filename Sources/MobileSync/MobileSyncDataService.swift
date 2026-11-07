@@ -95,19 +95,12 @@ public struct MobileSyncDataService: @unchecked Sendable {
     service.triggerSync(immediately: immediately)
   }
 
-  /// Syncs now, as ``triggerSync(immediately:)`` with `true` does, and returns once the user can stop waiting, such as
-  /// for a pull-to-refresh: the run ended, or its attempt failed and the run waits to retry, rather than waiting
-  /// through the backoff (offline, say). A sync already running finishes first, and the one after it is the one
-  /// waited for; calls before that one starts share it. The run is recorded as ``MobileSyncRunTrigger/manual``, unless
-  /// another immediate run, such as a sign-in's, was already due and hadn't started; it waits for that one instead.
+  /// Runs the sync ``triggerSync(immediately:)`` with `true` runs and waits until it ends or its attempt fails and
+  /// waits to retry, such as for a pull-to-refresh. A sync already running finishes first; this waits for the one
+  /// after it, which calls made before it starts share.
   ///
-  /// Without a signed-in user it returns ``MobileSyncNowResult/signedOut``, and while signing out
-  /// ``MobileSyncNowResult/unavailable``. When it returns, ``syncStatusSequence()`` and ``syncHistorySequence()``
-  /// already show the result.
-  ///
-  /// - Throws: `CancellationError` when the task is cancelled, which stops only the wait: the sync goes on. Or
-  ///   ``MobileSyncDataError``, usually ``MobileSyncDataError/failed(underlying:)``, when MobileSync couldn't finish a
-  ///   sign-out the previous launch left unfinished, or for a result this package doesn't know yet.
+  /// - Throws: `CancellationError` when the task is cancelled, which stops only the wait. ``MobileSyncDataError``
+  ///   when MobileSync couldn't finish an earlier sign-out at launch, or for a result this package doesn't know yet.
   public func syncNow() async throws -> MobileSyncNowResult {
     let result = try await bridgingDataErrors { try await asyncFunction(for: service.syncNow()) }
     return try known(MobileSyncNowResult(result))

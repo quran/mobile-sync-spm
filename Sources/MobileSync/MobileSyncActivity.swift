@@ -27,27 +27,16 @@ public enum MobileSyncStatus: Hashable, Sendable {
   case failed(at: Date, error: MobileSyncRunError)
 }
 
-/// Where the sync ``MobileSyncDataService/syncNow()`` started stopped being worth waiting for, or why none ran: what a
-/// pull-to-refresh or a "Sync now" spinner waits for. By the time it's returned,
-/// ``MobileSyncDataService/syncStatusSequence()`` and ``MobileSyncDataService/syncHistorySequence()`` show it too.
+/// How the sync ``MobileSyncDataService/syncNow()`` waited for ended, or why none ran.
 public enum MobileSyncNowResult: Hashable, Sendable {
-  /// The run ended as the run says: it succeeded, failed with no retries left (``MobileSyncRun/error`` says why), or
-  /// was cancelled. It never only pulls: this run pushes even while pushes back off. It's the run
-  /// ``MobileSyncDataService/syncHistorySequence()`` lists.
+  /// The run ended: succeeded, failed with no retries left, or cancelled. It's the run the history lists.
   case ended(MobileSyncRun)
-  /// The run's attempt failed at `failedAt` because of `error`, and the run tries again on its own at
-  /// `nextAttemptAt`, as ``MobileSyncStatus/retrying(failedAt:error:nextAttemptAt:)`` shows. The caller isn't held
-  /// through the backoff (offline, say); the run's end shows only in the status and the history.
-  ///
-  /// Like the status, it can tell of a retry that never comes: when a "Sync now" arrived while the failed attempt ran,
-  /// that sync runs right after it instead.
+  /// The attempt failed and the run retries on its own. The retry may never come: a "Sync now" during the failed
+  /// attempt runs in its place.
   case retrying(failedAt: Date, error: MobileSyncRunError, nextAttemptAt: Date)
-  /// Nothing synced: no one is signed in, the signed-in account is unknown, or the session ended before the run
-  /// reached the server. Nothing was recorded.
+  /// No one is signed in, or the signed-in account is unknown, or the session ended before the run reached the server.
   case signedOut
-  /// Sync can't run now: a sign-out is running or began during the run (which deletes what it did), or MobileSync
-  /// stopped before the run started, including while it finished an earlier sign-out at launch. Nothing was recorded.
-  /// MobileSync stopping during the run ends it instead: ``ended(_:)`` with a ``MobileSyncRunResult/cancelled`` run.
+  /// A sign-out is running or began during the run, or MobileSync stopped before the run started.
   case unavailable
 }
 
@@ -295,7 +284,7 @@ extension MobileSyncStatus {
 }
 
 extension MobileSyncNowResult {
-  /// Returns `nil` for a result, or a run's trigger or result, this package doesn't know yet.
+  /// Returns `nil` for a result this package doesn't know yet.
   init?(_ result: SyncNowResult) {
     switch result {
     case let result as SyncNowResult.Ended:
