@@ -27,6 +27,28 @@ public enum MobileSyncStatus: Hashable, Sendable {
   case failed(at: Date, error: MobileSyncRunError)
 }
 
+/// Where the sync ``MobileSyncDataService/syncNow()`` started stopped being worth waiting for, or why none ran: what a
+/// pull-to-refresh or a "Sync now" spinner waits for. By the time it's returned,
+/// ``MobileSyncDataService/syncStatusSequence()`` and ``MobileSyncDataService/syncHistorySequence()`` show it too.
+public enum MobileSyncNowResult: Hashable, Sendable {
+  /// The run ended as the run says: it succeeded, pulled only, failed with no retries left (``MobileSyncRun/error``
+  /// says why), or was cancelled. It's the run ``MobileSyncDataService/syncHistorySequence()`` lists.
+  case ended(MobileSyncRun)
+  /// The run's attempt failed at `failedAt` because of `error`, and the run tries again on its own at
+  /// `nextAttemptAt`, as ``MobileSyncStatus/retrying(failedAt:error:nextAttemptAt:)`` shows. The caller isn't held
+  /// through the backoff (offline, say); the run's end shows only in the status and the history.
+  ///
+  /// Like the status, it can tell of a retry that never comes: when a "Sync now" arrived while the failed attempt ran,
+  /// that sync runs right after it instead.
+  case retrying(failedAt: Date, error: MobileSyncRunError, nextAttemptAt: Date)
+  /// Nothing synced: no one is signed in, or the session ended before the run reached the server. Nothing was
+  /// recorded.
+  case signedOut
+  /// Sync can't run now: a sign-out is running or began during the run (which deletes what it did), or MobileSync
+  /// stopped before the run started. Nothing was recorded.
+  case unavailable
+}
+
 /// One sync run: the first attempt and its retries. It never carries user data or server messages.
 public struct MobileSyncRun: Hashable, Sendable {
   /// When the first attempt began contacting the sync server.
@@ -265,6 +287,28 @@ extension MobileSyncStatus {
       self = .failed(at: status.at, error: MobileSyncRunError(status.error))
     default:
       // A status this package doesn't know yet is dropped, so the sequence keeps showing the previous one.
+      return nil
+    }
+  }
+}
+
+extension MobileSyncNowResult {
+  /// Returns `nil` for a result, or a run's trigger or result, this package doesn't know yet.
+  init?(_ result: SyncNowResult) {
+    switch result {
+    case let result as SyncNowResult.Ended:
+      guard let run = MobileSyncRun(result.run) else {
+        return nil
+      }
+      self = .ended(run)
+    case let result as SyncNowResult.Retrying:
+      self = .retrying(
+        failedAt: result.failedAt, error: MobileSyncRunError(result.error), nextAttemptAt: result.nextAttemptAt)
+    case is SyncNowResult.SignedOut:
+      self = .signedOut
+    case is SyncNowResult.Unavailable:
+      self = .unavailable
+    default:
       return nil
     }
   }
