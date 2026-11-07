@@ -27,6 +27,19 @@ public enum MobileSyncStatus: Hashable, Sendable {
   case failed(at: Date, error: MobileSyncRunError)
 }
 
+/// How the sync ``MobileSyncDataService/syncNow()`` waited for ended, or why none ran.
+public enum MobileSyncNowResult: Hashable, Sendable {
+  /// The run ended: succeeded, failed with no retries left, or cancelled. It's the run the history lists.
+  case ended(MobileSyncRun)
+  /// The attempt failed and the run retries on its own. The retry may never come: a "Sync now" during the failed
+  /// attempt runs in its place.
+  case retrying(failedAt: Date, error: MobileSyncRunError, nextAttemptAt: Date)
+  /// No one is signed in, or the signed-in account is unknown, or the session ended before the run reached the server.
+  case signedOut
+  /// A sign-out is running or began during the run, or MobileSync stopped before the run started.
+  case unavailable
+}
+
 /// One sync run: the first attempt and its retries. It never carries user data or server messages.
 public struct MobileSyncRun: Hashable, Sendable {
   /// When the first attempt began contacting the sync server.
@@ -265,6 +278,28 @@ extension MobileSyncStatus {
       self = .failed(at: status.at, error: MobileSyncRunError(status.error))
     default:
       // A status this package doesn't know yet is dropped, so the sequence keeps showing the previous one.
+      return nil
+    }
+  }
+}
+
+extension MobileSyncNowResult {
+  /// Returns `nil` for a result this package doesn't know yet.
+  init?(_ result: SyncNowResult) {
+    switch result {
+    case let result as SyncNowResult.Ended:
+      guard let run = MobileSyncRun(result.run) else {
+        return nil
+      }
+      self = .ended(run)
+    case let result as SyncNowResult.Retrying:
+      self = .retrying(
+        failedAt: result.failedAt, error: MobileSyncRunError(result.error), nextAttemptAt: result.nextAttemptAt)
+    case is SyncNowResult.SignedOut:
+      self = .signedOut
+    case is SyncNowResult.Unavailable:
+      self = .unavailable
+    default:
       return nil
     }
   }
