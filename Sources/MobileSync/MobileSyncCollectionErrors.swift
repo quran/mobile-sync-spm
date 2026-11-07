@@ -8,7 +8,8 @@ public struct MobileSyncReadOnlyCollectionError: Error, Equatable, Sendable {
   public let id: String
 }
 
-/// Renaming a collection to a name another collection has. Names compare trimmed and case-insensitively.
+/// Creating a collection, or renaming one, with a name another collection has. Names compare trimmed and
+/// case-insensitively.
 public struct MobileSyncDuplicateCollectionNameError: Error, Equatable, Sendable {
   /// The name of the collection that already has the name.
   public let name: String

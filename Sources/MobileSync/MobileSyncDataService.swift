@@ -194,7 +194,8 @@ public struct MobileSyncDataService: @unchecked Sendable {
 
   // MARK: Collections
 
-  /// - Throws: ``MobileSyncReservedCollectionNameError`` when the name is reserved.
+  /// - Throws: ``MobileSyncReservedCollectionNameError`` when the name is reserved, and
+  ///   ``MobileSyncDuplicateCollectionNameError`` when another collection has the name.
   public func createCollection(named name: String, timestamp: Date = Date()) async throws
     -> MobileSyncCollection
   {
@@ -255,6 +256,21 @@ public struct MobileSyncDataService: @unchecked Sendable {
     }
   }
 
+  /// Removes every bookmark from the collection in one write and keeps the collection. It works on read-only
+  /// collections such as Favorites. The verses stay in their other collections. A stored verse that doesn't exist
+  /// (such as 2:999) is kept and not counted, as the server would refuse its delete.
+  ///
+  /// - Returns: How many memberships were removed; `0` when the collection has no existing verse or `collectionID`
+  ///   names none.
+  /// - Throws: `MobileSyncDataError.invalidArgument` when `collectionID` is a highlight collection; clear a color
+  ///   with ``deleteAyahHighlights(color:)``.
+  @discardableResult
+  public func removeAllAyahBookmarksFromCollection(collectionID: String) async throws -> Int {
+    try await bridgingInt {
+      try await asyncFunction(for: service.removeAllAyahBookmarksFromCollection(collectionId: collectionID))
+    }
+  }
+
   // MARK: Highlights
 
   public func setAyahHighlight(
@@ -281,6 +297,17 @@ public struct MobileSyncDataService: @unchecked Sendable {
   public func deleteAyahHighlight(sura: Int, ayah: Int) async throws -> Bool {
     try await bridgingBool {
       try await asyncFunction(for: service.deleteHighlight(sura: Int32(sura), ayah: Int32(ayah)))
+    }
+  }
+
+  /// Deletes every verse's highlight in `color` in one write. Other colors and the verses' collections stay. A stored
+  /// verse that doesn't exist (such as 2:999) is kept and not counted, as the server would refuse its delete.
+  ///
+  /// - Returns: How many highlights were removed; `0` when no existing verse has `color`.
+  @discardableResult
+  public func deleteAyahHighlights(color: MobileSyncHighlightColor) async throws -> Int {
+    try await bridgingInt {
+      try await asyncFunction(for: service.deleteHighlights(color: color.kotlinColor))
     }
   }
 
@@ -387,6 +414,10 @@ public struct MobileSyncDataService: @unchecked Sendable {
 
   private func bridgingBool(_ operation: () async throws -> KotlinBoolean) async throws -> Bool {
     try await bridgingDataErrors(operation).boolValue
+  }
+
+  private func bridgingInt(_ operation: () async throws -> KotlinInt) async throws -> Int {
+    try await bridgingDataErrors(operation).intValue
   }
 
   private func bridgingReadingBookmark(
