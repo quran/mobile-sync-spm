@@ -95,6 +95,11 @@ Sync activity, for a "Sync now" button, "Last synced", a sync log, or a sign-out
 
 ```swift
 data.triggerSync(immediately: true) // "Sync now". Without a signed-in user, nothing syncs.
+
+// Pull-to-refresh (in `.refreshable`): the same sync, waited for.
+if case .ended(let run) = try await data.syncNow(), run.result == .failed {
+  print("Sync failed: \(run.error?.message ?? "")")
+}
 data.syncOnForeground() // On each return from the background (not at launch); the run's trigger is .foreground.
 
 // "Last synced": the newest succeeded run. The history is stored, unlike the status.
@@ -113,7 +118,9 @@ let unsynced = try await data.unsyncedItemsSequence().first { _ in true }
 
 `syncStatusSequence()` is for a live spinner or error: `MobileSyncStatus` isn't stored, so it is `.idle` after launch
 and has no time while `.syncing`. Between a failed attempt and its retry it is `.retrying`, with the error and when the
-retry starts; a "Sync now" then runs at once. `syncHistorySequence()` yields the newest sync runs (`MobileSyncRun`:
+retry starts; a "Sync now" then runs at once. `syncNow()` runs that sync and waits for it (a sync already running
+finishes first; calls made before the next one starts share it), returning a `MobileSyncNowResult`: `.ended`,
+`.retrying`, `.signedOut` or `.unavailable`. Cancelling the task stops only the wait. `syncHistorySequence()` yields the newest sync runs (`MobileSyncRun`:
 trigger, result, counts and any `MobileSyncRunError`), `heldItemsSequence()` the items that don't sync
 (`MobileSyncHeldItem`: why, and the held item one waits on as a `MobileSyncHeldItem.Blocker`, which waits on nothing
 itself), and `unsyncedItemsSequence()` the pending and held counts (`MobileSyncUnsyncedItemCounts`) after every change.

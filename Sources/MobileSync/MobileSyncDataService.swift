@@ -95,6 +95,17 @@ public struct MobileSyncDataService: @unchecked Sendable {
     service.triggerSync(immediately: immediately)
   }
 
+  /// Runs the sync ``triggerSync(immediately:)`` with `true` runs and waits until it ends or its attempt fails and
+  /// waits to retry, such as for a pull-to-refresh. A sync already running finishes first; this waits for the one
+  /// after it, which calls made before it starts share.
+  ///
+  /// - Throws: `CancellationError` when the task is cancelled, which stops only the wait. ``MobileSyncDataError``
+  ///   when MobileSync couldn't finish an earlier sign-out at launch, or for a result this package doesn't know yet.
+  public func syncNow() async throws -> MobileSyncNowResult {
+    let result = try await bridgingDataErrors { try await asyncFunction(for: service.syncNow()) }
+    return try known(MobileSyncNowResult(result))
+  }
+
   /// Tells sync the app came back to the foreground, so it syncs soon; ``syncHistorySequence()`` records the run as
   /// ``MobileSyncRunTrigger/foreground``. Call it on each return from the background, not at launch, which has its
   /// own sync.

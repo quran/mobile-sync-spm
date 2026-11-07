@@ -29,6 +29,12 @@ final class SyncActivityIntegrationTests: XCTestCase {
     XCTAssertEqual(runs, [])
   }
 
+  func testSyncNowWithoutASignedInUserReturnsSignedOut() async throws {
+    let result = try await database.quranDataService.syncNow()
+
+    XCTAssertEqual(result, .signedOut)
+  }
+
   func testHeldItemsAreEmptyWithoutASync() async throws {
     // Only a push holds an item.
     try await database.quranDataService.createNote(
