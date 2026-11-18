@@ -38,9 +38,11 @@ public struct MobileSyncAuthService: @unchecked Sendable {
   }
 
   /// Signs in, always asking the identity provider to authenticate the user again (`prompt=login`).
-  public func login() async throws(MobileSyncAuthenticationError) {
+  /// - Parameter uiLocales: BCP 47 language tags, most preferred first, sent as the OIDC `ui_locales` so the sign-in
+  ///   page can match the app's language. With none, it follows the browser's language.
+  public func login(uiLocales: [String] = []) async throws(MobileSyncAuthenticationError) {
     do {
-      _ = try await asyncFunction(for: service.login())
+      _ = try await asyncFunction(for: service.login(uiLocales: uiLocales))
     } catch {
       throw MobileSyncAuthenticationError(bridgedError: error)
     }
