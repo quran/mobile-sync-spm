@@ -132,7 +132,8 @@ let auth = graph.authService
 
 // Restores the stored session; returns whether the user is signed in.
 if try await !auth.refreshAuthentication() {
-  try await auth.login() // Always asks for the user's credentials again.
+  // Always asks for credentials again, on a sign-in page in the app's language.
+  try await auth.login(uiLocales: Array(Bundle.main.preferredLocalizations.prefix(1)))
 }
 let headers = try await auth.authenticationHeaders() // For your own Quran.com requests.
 
